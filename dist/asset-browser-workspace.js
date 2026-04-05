@@ -31,6 +31,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
     const [diffRightText, setDiffRightText] = useState('');
     const [diffLabel, setDiffLabel] = useState('No diff loaded');
     const [actionBusy, setActionBusy] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const mountedRef = useRef(true);
     useEffect(() => {
         mountedRef.current = true;
@@ -421,6 +422,49 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             }
         }
     }
+    function triggerBrowserDownload(result) {
+        const url = URL.createObjectURL(result.blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = result.filename;
+        anchor.rel = 'noopener';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+    async function handleExport(targetPath) {
+        if (!selectedVersionId) {
+            return;
+        }
+        const exportPath = (targetPath ?? selectedPath) || '/';
+        const currentContext = createActionContext({ selectedPath: exportPath });
+        const allowed = await callbacks?.onBeforeExport?.({ versionId: selectedVersionId, path: exportPath }, currentContext);
+        if (allowed === false) {
+            return;
+        }
+        try {
+            setExporting(true);
+            const result = await client.downloadEntry(assetSpace, assetId, {
+                versionId: selectedVersionId,
+                path: exportPath,
+            });
+            triggerBrowserDownload(result);
+            if (!mountedRef.current) {
+                return;
+            }
+            setStatus({ tone: 'success', text: `Exported ${result.filename}` });
+            await callbacks?.onAfterExport?.(result, currentContext);
+        }
+        catch (error) {
+            reportError(error);
+        }
+        finally {
+            if (mountedRef.current) {
+                setExporting(false);
+            }
+        }
+    }
     const selectedVersion = versions.find((item) => item.versionId === selectedVersionId) ?? null;
     const selectedCompareVersion = versions.find((item) => item.versionId === compareVersionId) ?? null;
     const isDraftSelected = Boolean(selectedVersion?.isDraft);
@@ -436,7 +480,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             ...style,
         }, children: [_jsxs("div", { style: cardHeaderStyle, children: [_jsxs("div", { style: { display: 'grid', gap: 6 }, children: [_jsx("div", { style: { fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }, children: "Stew Asset Workspace" }), _jsx("div", { style: { fontSize: 22, fontWeight: 700 }, children: heading }), _jsxs("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 8 }, children: [pill('Space', assetSpace), pill('Asset', assetId), pill('Mode', isDraftSelected ? 'Draft' : 'Read only'), collection?.activeVersionId ? pill('Active', collection.activeVersionId) : null] })] }), _jsxs("div", { style: { display: 'grid', gap: 12, justifyItems: 'end' }, children: [renderHeaderExtras ? renderHeaderExtras(actionContext) : null, status ? (_jsx("div", { style: { ...toneStyle(status.tone), borderRadius: 14, padding: '10px 12px', fontSize: 13, maxWidth: 320 }, children: status.text })) : null] })] }), _jsxs("div", { style: toolbarStyle, children: [renderToolbarStart ? renderToolbarStart(actionContext) : null, _jsxs("label", { style: { display: 'grid', gap: 6, minWidth: 210 }, children: [_jsx("span", { style: { fontSize: 12, color: '#64748b', fontWeight: 600 }, children: "Current version" }), _jsx("select", { value: selectedVersionId, onChange: (event) => setSelectedVersionId(event.target.value), style: selectStyle, children: versions.map((version) => (_jsxs("option", { value: version.versionId, children: [version.versionId, " \u00B7 ", version.status, version.isActive ? ' · active' : '', version.isDraft ? ' · draft' : ''] }, version.versionId))) })] }), _jsxs("label", { style: { display: 'grid', gap: 6, minWidth: 210 }, children: [_jsx("span", { style: { fontSize: 12, color: '#64748b', fontWeight: 600 }, children: "Compare with" }), _jsxs("select", { value: compareVersionId, onChange: (event) => setCompareVersionId(event.target.value), style: selectStyle, children: [_jsx("option", { value: "", children: "No comparison" }), versions
                                         .filter((version) => version.versionId !== selectedVersionId)
-                                        .map((version) => (_jsxs("option", { value: version.versionId, children: [version.versionId, " \u00B7 ", version.status] }, version.versionId)))] })] }), _jsxs("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }, children: [!collection?.hasDraft ? (_jsx("button", { type: "button", style: primaryButtonStyle, disabled: actionBusy, onClick: () => void handleCreateDraft(), children: "Create draft" })) : null, collection?.hasDraft ? (_jsx("button", { type: "button", style: buttonBaseStyle, disabled: actionBusy, onClick: () => void handleDiscardDraft(), children: "Discard draft" })) : null, collection?.hasDraft ? (_jsx("button", { type: "button", style: primaryButtonStyle, disabled: actionBusy, onClick: () => void handlePublishDraft(), children: "Publish draft" })) : null, _jsx("button", { type: "button", style: buttonBaseStyle, disabled: !selectedPath, onClick: () => setShowDiff((value) => !value), children: showDiff ? 'Hide diff' : 'Show diff' }), _jsx("button", { type: "button", style: buttonBaseStyle, disabled: loading, onClick: () => void loadWorkspace(), children: "Refresh" })] }), renderToolbarEnd ? renderToolbarEnd(actionContext) : null] }), _jsx("div", { style: { flex: 1, minHeight: 0 }, children: _jsxs(Group, { orientation: "horizontal", children: [_jsx(Panel, { defaultSize: 24, minSize: 18, children: _jsx("div", { style: { ...sectionStyle, background: 'rgba(255,255,255,0.72)' }, children: _jsx(AssetTree, { nodes: treeNodes, expandedPaths: expandedPaths, selectedPath: selectedPath, loading: loading, onSelect: (path) => setSelectedPath(path), onToggle: (path) => {
+                                        .map((version) => (_jsxs("option", { value: version.versionId, children: [version.versionId, " \u00B7 ", version.status] }, version.versionId)))] })] }), _jsxs("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }, children: [!collection?.hasDraft ? (_jsx("button", { type: "button", style: primaryButtonStyle, disabled: actionBusy, onClick: () => void handleCreateDraft(), children: "Create draft" })) : null, collection?.hasDraft ? (_jsx("button", { type: "button", style: buttonBaseStyle, disabled: actionBusy, onClick: () => void handleDiscardDraft(), children: "Discard draft" })) : null, collection?.hasDraft ? (_jsx("button", { type: "button", style: primaryButtonStyle, disabled: actionBusy, onClick: () => void handlePublishDraft(), children: "Publish draft" })) : null, _jsx("button", { type: "button", style: buttonBaseStyle, disabled: !selectedPath, onClick: () => setShowDiff((value) => !value), children: showDiff ? 'Hide diff' : 'Show diff' }), _jsx("button", { type: "button", style: buttonBaseStyle, disabled: !selectedVersionId || exporting, onClick: () => void handleExport(), children: exporting ? 'Exporting...' : selectedPath ? 'Export selection' : 'Export version' }), _jsx("button", { type: "button", style: buttonBaseStyle, disabled: loading, onClick: () => void loadWorkspace(), children: "Refresh" })] }), renderToolbarEnd ? renderToolbarEnd(actionContext) : null] }), _jsx("div", { style: { flex: 1, minHeight: 0 }, children: _jsxs(Group, { orientation: "horizontal", children: [_jsx(Panel, { defaultSize: 24, minSize: 18, children: _jsx("div", { style: { ...sectionStyle, background: 'rgba(255,255,255,0.72)' }, children: _jsx(AssetTree, { nodes: treeNodes, expandedPaths: expandedPaths, selectedPath: selectedPath, loading: loading, onSelect: (path) => setSelectedPath(path), onToggle: (path) => {
                                         setExpandedPaths((current) => {
                                             const next = new Set(current);
                                             if (next.has(path)) {
@@ -447,7 +491,12 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                                             }
                                             return next;
                                         });
-                                    }, renderNodeMeta: renderTreeNodeMeta, renderNodeActions: renderTreeNodeActions }) }) }), _jsx(Separator, { style: panelHandleStyle }), _jsx(Panel, { defaultSize: showDiff ? 44 : 76, minSize: 32, children: _jsx("div", { style: sectionStyle, children: _jsx(AssetEditor, { selectedPath: selectedPath, selectedEntry: selectedEntry, language: editorLanguage, value: editorText, canEdit: canEdit, dirty: dirty, saving: saving, entryRevision: entryRevision, onChange: (value) => {
+                                    }, renderNodeMeta: renderTreeNodeMeta, renderNodeActions: (node) => (_jsxs("div", { style: { display: 'inline-flex', alignItems: 'center', gap: 6 }, children: [!node.isDirectory || node.path ? (_jsx("button", { type: "button", style: {
+                                                    ...buttonBaseStyle,
+                                                    padding: '4px 8px',
+                                                    fontSize: 11,
+                                                    lineHeight: 1.2,
+                                                }, disabled: exporting || !selectedVersionId, onClick: () => void handleExport(node.path), children: "Export" })) : null, renderTreeNodeActions ? renderTreeNodeActions(node) : null] })) }) }) }), _jsx(Separator, { style: panelHandleStyle }), _jsx(Panel, { defaultSize: showDiff ? 44 : 76, minSize: 32, children: _jsx("div", { style: sectionStyle, children: _jsx(AssetEditor, { selectedPath: selectedPath, selectedEntry: selectedEntry, language: editorLanguage, value: editorText, canEdit: canEdit, dirty: dirty, saving: saving, entryRevision: entryRevision, onChange: (value) => {
                                         setEditorText(value);
                                         setDirty(value !== originalText);
                                     }, onSave: canEdit ? () => void handleSave() : undefined, actions: renderEditorActions ? renderEditorActions(actionContext) : null }) }) }), showDiff ? (_jsxs(_Fragment, { children: [_jsx(Separator, { style: panelHandleStyle }), _jsx(Panel, { defaultSize: 32, minSize: 20, children: _jsx("div", { style: { ...sectionStyle, background: '#f8fafc' }, children: _jsx(AssetDiffViewer, { label: diffLabel, language: editorLanguage, summary: diffSummary, entries: diffEntries, selectedPath: selectedPath, originalText: diffLeftText, modifiedText: diffRightText, onSelectEntry: (path) => setSelectedPath(path), actions: renderDiffActions ? renderDiffActions(actionContext) : null }) }) })] })) : null] }) }), selectedCompareVersion ? (_jsxs("div", { style: { padding: '10px 18px', borderTop: '1px solid rgba(148,163,184,0.14)', fontSize: 12, color: '#64748b' }, children: ["Comparing against ", selectedCompareVersion.versionId, " when diff mode is enabled."] })) : null, renderFooter ? (_jsx("div", { style: { padding: '12px 18px', borderTop: '1px solid rgba(148,163,184,0.10)', background: 'rgba(248,250,252,0.92)' }, children: renderFooter(actionContext) })) : null] }));

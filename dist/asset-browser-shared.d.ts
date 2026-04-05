@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import type { AssetCollection, AssetTreeEntry, AssetVersionSummary, CreateDraftResult, PublishResult, SaveTextResult } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
+import type { AssetCollection, DownloadEntryResult, AssetTreeEntry, AssetVersionSummary, CreateDraftResult, PublishResult, SaveTextResult } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 export type WorkspaceTone = 'neutral' | 'success' | 'warning' | 'error';
 export interface StatusMessage {
     tone: WorkspaceTone;
@@ -55,6 +55,11 @@ export interface AssetBrowserWorkspaceCallbacks {
     onAfterPublishDraft?: (result: PublishResult, context: AssetBrowserActionContext) => MaybePromise<void>;
     onBeforeSave?: (text: string, context: AssetBrowserActionContext) => MaybePromise<boolean | void>;
     onAfterSave?: (result: SaveTextResult, context: AssetBrowserActionContext) => MaybePromise<void>;
+    onBeforeExport?: (target: {
+        versionId: string;
+        path: string;
+    }, context: AssetBrowserActionContext) => MaybePromise<boolean | void>;
+    onAfterExport?: (result: DownloadEntryResult, context: AssetBrowserActionContext) => MaybePromise<void>;
 }
 export declare const shellStyle: CSSProperties;
 export declare const panelHandleStyle: CSSProperties;

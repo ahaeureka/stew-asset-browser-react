@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type {
     AssetCollection,
+    DownloadEntryResult,
     AssetTreeEntry,
     AssetVersionSummary,
     CreateDraftResult,
@@ -71,6 +72,11 @@ export interface AssetBrowserWorkspaceCallbacks {
     onAfterPublishDraft?: (result: PublishResult, context: AssetBrowserActionContext) => MaybePromise<void>;
     onBeforeSave?: (text: string, context: AssetBrowserActionContext) => MaybePromise<boolean | void>;
     onAfterSave?: (result: SaveTextResult, context: AssetBrowserActionContext) => MaybePromise<void>;
+    onBeforeExport?: (
+        target: { versionId: string; path: string },
+        context: AssetBrowserActionContext,
+    ) => MaybePromise<boolean | void>;
+    onAfterExport?: (result: DownloadEntryResult, context: AssetBrowserActionContext) => MaybePromise<void>;
 }
 
 export const shellStyle: CSSProperties = {

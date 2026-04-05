@@ -83,6 +83,71 @@ const client = new AssetBrowserClient({
 - 浏览器端请从 `protobuf-typescript-client-gen/dist/asset_browser_client` 导入。
 - 客户端默认携带 cookie，并会复用当前登录态。
 
+## 资产导出
+
+这套 UI SDK 现在同时覆盖“浏览 / 编辑 / Diff / 导出”四类常见资产操作。
+
+导出语义约定如下：
+
+- 选中文件时：直接下载该文件
+- 选中目录时：服务端递归打包为 zip 后下载
+- 未指定路径或选中根目录时：导出整个版本内容的 zip
+
+对应的底层 HTTP 接口为：
+
+```text
+GET /api/v1/assets/{assetSpace}/{assetId}/export?version_id=...&path=...
+```
+
+该接口由 `BusinessAssetBrowserService.ExportAssetEntry` 统一定义，返回 `google.api.HttpBody`；浏览器侧通过映射后的 HTTP 下载端点消费。
+
+### AssetBrowserClient 导出方法
+
+```tsx
+const result = await client.downloadEntry("configs", "gateway-routing", {
+  versionId: "v20260401",
+  path: "/templates",
+});
+
+console.log(result.filename);
+console.log(result.contentType);
+```
+
+返回值说明：
+
+| 字段 | 类型 | 含义 |
+|------|------|------|
+| `blob` | `Blob` | 浏览器可直接保存的二进制内容 |
+| `filename` | `string` | 服务端返回的建议下载文件名 |
+| `contentType` | `string` | HTTP 响应的内容类型；目录导出通常为 `application/zip` |
+
+### 在 React 中触发下载
+
+```tsx
+async function handleExport() {
+  const result = await client.downloadEntry("configs", "gateway-routing", {
+    versionId: "v20260401",
+    path: "/templates",
+  });
+
+  const url = URL.createObjectURL(result.blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = result.filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+```
+
+### AssetBrowserWorkspace 的默认导出行为
+
+`AssetBrowserWorkspace` 会内置导出动作：
+
+- 顶部工具栏支持导出当前选中条目
+- 目录节点导出时自动请求 zip
+- 文件节点导出时保持原始文件类型
+- 业务侧仍可通过 `renderToolbarEnd`、`renderTreeNodeActions` 等扩展槽覆盖或补充导出入口
+
 ## AssetBrowserWorkspace 入参说明
 
 `AssetBrowserWorkspace` 是推荐的完整工作台组件，适合业务前端直接嵌入。

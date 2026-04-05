@@ -13,6 +13,7 @@ import {
     type AssetCollection,
     type AssetDiffEntry,
     type AssetDiffSummary,
+    type DownloadEntryResult,
     type AssetTreeEntry,
     type AssetVersionSummary,
     AssetBrowserClient,
@@ -127,6 +128,7 @@ export function AssetBrowserWorkspace({
     const [diffRightText, setDiffRightText] = useState('');
     const [diffLabel, setDiffLabel] = useState('No diff loaded');
     const [actionBusy, setActionBusy] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const mountedRef = useRef(true);
 
     useEffect(() => {
@@ -567,6 +569,55 @@ export function AssetBrowserWorkspace({
         }
     }
 
+    function triggerBrowserDownload(result: DownloadEntryResult) {
+        const url = URL.createObjectURL(result.blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = result.filename;
+        anchor.rel = 'noopener';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+
+    async function handleExport(targetPath?: string) {
+        if (!selectedVersionId) {
+            return;
+        }
+
+        const exportPath = (targetPath ?? selectedPath) || '/';
+        const currentContext = createActionContext({ selectedPath: exportPath });
+        const allowed = await callbacks?.onBeforeExport?.(
+            { versionId: selectedVersionId, path: exportPath },
+            currentContext,
+        );
+
+        if (allowed === false) {
+            return;
+        }
+
+        try {
+            setExporting(true);
+            const result = await client.downloadEntry(assetSpace, assetId, {
+                versionId: selectedVersionId,
+                path: exportPath,
+            });
+            triggerBrowserDownload(result);
+            if (!mountedRef.current) {
+                return;
+            }
+            setStatus({ tone: 'success', text: `Exported ${result.filename}` });
+            await callbacks?.onAfterExport?.(result, currentContext);
+        } catch (error) {
+            reportError(error);
+        } finally {
+            if (mountedRef.current) {
+                setExporting(false);
+            }
+        }
+    }
+
     const selectedVersion = versions.find((item) => item.versionId === selectedVersionId) ?? null;
     const selectedCompareVersion = versions.find((item) => item.versionId === compareVersionId) ?? null;
     const isDraftSelected = Boolean(selectedVersion?.isDraft);
@@ -656,6 +707,14 @@ export function AssetBrowserWorkspace({
                     <button type="button" style={buttonBaseStyle} disabled={!selectedPath} onClick={() => setShowDiff((value) => !value)}>
                         {showDiff ? 'Hide diff' : 'Show diff'}
                     </button>
+                    <button
+                        type="button"
+                        style={buttonBaseStyle}
+                        disabled={!selectedVersionId || exporting}
+                        onClick={() => void handleExport()}
+                    >
+                        {exporting ? 'Exporting...' : selectedPath ? 'Export selection' : 'Export version'}
+                    </button>
                     <button type="button" style={buttonBaseStyle} disabled={loading} onClick={() => void loadWorkspace()}>
                         Refresh
                     </button>
@@ -686,7 +745,26 @@ export function AssetBrowserWorkspace({
                                     });
                                 }}
                                 renderNodeMeta={renderTreeNodeMeta}
-                                renderNodeActions={renderTreeNodeActions}
+                                renderNodeActions={(node) => (
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                        {!node.isDirectory || node.path ? (
+                                            <button
+                                                type="button"
+                                                style={{
+                                                    ...buttonBaseStyle,
+                                                    padding: '4px 8px',
+                                                    fontSize: 11,
+                                                    lineHeight: 1.2,
+                                                }}
+                                                disabled={exporting || !selectedVersionId}
+                                                onClick={() => void handleExport(node.path)}
+                                            >
+                                                Export
+                                            </button>
+                                        ) : null}
+                                        {renderTreeNodeActions ? renderTreeNodeActions(node) : null}
+                                    </div>
+                                )}
                             />
                         </div>
                     </Panel>
