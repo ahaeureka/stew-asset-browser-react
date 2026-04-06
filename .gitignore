@@ -1,0 +1,23 @@
+/target
+
+# Environment variables (never commit real secrets)
+.env
+.env.*
+!.env.example
+!.env.template
+!.env.unified_auth
+
+# Local YAML overrides for environment-specific config
+config.local.yaml
+config.*.local.yaml
+config/config.local.yaml
+config/config.*.local.yaml
+
+*.log
+.zsh_history
+node_moudles
+.pnpm-store/
+node_modules
+.devcontainer/.zsh_history
+.venv
+.worktrees/
