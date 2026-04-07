@@ -13,15 +13,19 @@ Stew 业务资产浏览 React UI SDK。
 ```json
 {
   "dependencies": {
-    "protobuf-typescript-client-gen": "link:../protobuf-typescript-client-gen",
-    "stew-asset-browser-react": "link:../stew-asset-browser-react"
+    "protobuf-typescript-client-gen": "github:ahaeureka/protobuf-typescript-client-gen",
+    "stew-asset-browser-react": "github:ahaeureka/stew-asset-browser-react"
   }
 }
 ```
 
 浏览器端请直接使用 `asset_browser_client` 入口，避免把 Node 侧辅助模块打进前端包。
 
+这两个包按独立仓库、独立依赖来使用。业务项目里应当分别声明这两个依赖，不要依赖 `workspace:*`、`link:` 或让 `stew-asset-browser-react` 代替你隐式安装 `protobuf-typescript-client-gen`。
+
 当前这套 UI SDK 文档按已经落地的后端资产接口编写，不按 proto 里的预留字段做超前描述。
+
+业务前端如果需要一份面向接入和升级的说明，请直接看 [docs/业务侧接入升级指引-20260407.md](docs/%E4%B8%9A%E5%8A%A1%E4%BE%A7%E6%8E%A5%E5%85%A5%E5%8D%87%E7%BA%A7%E6%8C%87%E5%BC%95-20260407.md)。
 
 ## 本地效果预览
 

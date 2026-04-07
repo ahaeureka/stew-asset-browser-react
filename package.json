@@ -14,12 +14,12 @@
     "scripts": {
         "build": "tsc && node ./scripts/copy-assets.mjs",
         "clean": "rm -rf dist preview/dist",
-        "prepare": "pnpm build",
         "preview": "vite --config preview/vite.config.ts",
         "preview:build": "vite build --config preview/vite.config.ts"
     },
     "packageManager": "pnpm@10.14.0",
     "peerDependencies": {
+        "protobuf-typescript-client-gen": "^1.0.1",
         "react": "^19.0.0",
         "react-dom": "^19.0.0"
     },
@@ -27,7 +27,6 @@
         "@monaco-editor/react": "^4.7.0",
         "marked": "^18.0.0",
         "monaco-editor": "^0.55.1",
-        "protobuf-typescript-client-gen": "workspace:*",
         "rc-tree": "^5.13.1",
         "react-markdown": "^10.1.0",
         "react-resizable-panels": "^4.9.0",
@@ -38,6 +37,7 @@
         "@types/react": "^19.1.12",
         "@types/react-dom": "^19.1.9",
         "@vitejs/plugin-react": "^6.0.1",
+        "protobuf-typescript-client-gen": "github:ahaeureka/protobuf-typescript-client-gen",
         "react": "19.2.4",
         "react-dom": "19.2.4",
         "typescript": "^5.9.2",
