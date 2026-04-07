@@ -1,0 +1,241 @@
+.stew-asset-tree {
+    --tree-accent: #0f766e;
+    --tree-accent-strong: #115e59;
+    --tree-accent-soft: rgba(15, 118, 110, 0.12);
+    --tree-border: rgba(148, 163, 184, 0.18);
+    --tree-border-strong: rgba(15, 118, 110, 0.22);
+    --tree-muted: #64748b;
+    --tree-foreground: #0f172a;
+    background: transparent;
+    border: 0;
+    font-family: "Avenir Next", "Segoe UI Variable", "IBM Plex Sans", sans-serif;
+}
+
+.stew-asset-tree .rc-tree-list-holder-inner {
+    gap: 4px;
+}
+
+.stew-asset-tree .rc-tree-treenode {
+    width: 100%;
+    padding: 1px 0;
+}
+
+.stew-asset-tree .rc-tree-indent-unit {
+    width: 20px;
+}
+
+.stew-asset-tree .rc-tree-node-content-wrapper {
+    display: block;
+    width: calc(100% - 24px);
+    height: auto;
+    padding: 0;
+    border-radius: 14px;
+}
+
+.stew-asset-tree .rc-tree-node-content-wrapper:hover {
+    background: transparent;
+}
+
+.stew-asset-tree .rc-tree-node-content-wrapper.rc-tree-node-selected {
+    background: transparent;
+    box-shadow: none;
+}
+
+.stew-asset-tree .rc-tree-switcher {
+    width: 24px;
+    margin-right: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stew-asset-tree .rc-tree-treenode-selected>.rc-tree-node-content-wrapper,
+.stew-asset-tree .rc-tree-treenode-active>.rc-tree-node-content-wrapper {
+    background: transparent;
+}
+
+.stew-asset-tree__switcher {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    color: var(--tree-muted);
+    transition: background 140ms ease, color 140ms ease;
+}
+
+.stew-asset-tree .rc-tree-treenode:hover .stew-asset-tree__switcher:not(.is-leaf) {
+    background: rgba(148, 163, 184, 0.14);
+    color: var(--tree-foreground);
+}
+
+.stew-asset-tree__switcher.is-leaf {
+    opacity: 0;
+}
+
+.stew-asset-tree__switcher-spacer {
+    width: 18px;
+    height: 18px;
+}
+
+.stew-asset-tree__chevron {
+    width: 12px;
+    height: 12px;
+    transform: rotate(0deg);
+    transition: transform 140ms ease;
+}
+
+.stew-asset-tree__chevron.is-expanded {
+    transform: rotate(90deg);
+}
+
+.stew-asset-tree__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 6px 8px 6px 10px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    color: var(--tree-foreground);
+    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, color 140ms ease;
+}
+
+.stew-asset-tree .rc-tree-treenode:hover .stew-asset-tree__row {
+    background: rgba(255, 255, 255, 0.88);
+    border-color: var(--tree-border);
+}
+
+.stew-asset-tree__row[data-selected='true'] {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 253, 250, 0.98));
+    border-color: var(--tree-border-strong);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    color: var(--tree-accent-strong);
+}
+
+.stew-asset-tree__leading {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.stew-asset-tree__glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: #64748b;
+}
+
+.stew-asset-tree__row[data-directory='true'] .stew-asset-tree__glyph {
+    color: #b45309;
+}
+
+.stew-asset-tree__row[data-selected='true'] .stew-asset-tree__glyph {
+    color: var(--tree-accent);
+}
+
+.stew-asset-tree__svg {
+    width: 20px;
+    height: 20px;
+}
+
+.stew-asset-tree__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    line-height: 1.35;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.stew-asset-tree__row[data-directory='false'] .stew-asset-tree__label {
+    font-weight: 550;
+}
+
+.stew-asset-tree__meta {
+    margin-left: auto;
+    min-width: 0;
+    font-size: 11px;
+    line-height: 1.2;
+    color: var(--tree-muted);
+    white-space: nowrap;
+}
+
+.stew-asset-tree__row[data-selected='true'] .stew-asset-tree__meta {
+    color: color-mix(in srgb, var(--tree-accent-strong) 80%, white);
+}
+
+.stew-asset-tree__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(6px);
+    transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.stew-asset-tree .rc-tree-treenode:hover .stew-asset-tree__actions,
+.stew-asset-tree__row[data-selected='true'] .stew-asset-tree__actions {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+.stew-asset-tree__actions button,
+.stew-asset-tree__action-button {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(255, 255, 255, 0.94);
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: border-color 140ms ease, background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.stew-asset-tree__actions button:hover,
+.stew-asset-tree__action-button:hover {
+    border-color: rgba(15, 118, 110, 0.28);
+    background: rgba(240, 253, 250, 0.96);
+    color: var(--tree-accent-strong);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.stew-asset-tree__actions button:disabled,
+.stew-asset-tree__action-button:disabled {
+    opacity: 0.56;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.stew-asset-tree__action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+}
+
+.stew-asset-tree__action-icon svg {
+    width: 12px;
+    height: 12px;
+}

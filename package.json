@@ -12,8 +12,9 @@
         }
     },
     "scripts": {
-        "build": "tsc",
+        "build": "tsc && node ./scripts/copy-assets.mjs",
         "clean": "rm -rf dist preview/dist",
+        "prepare": "pnpm build",
         "preview": "vite --config preview/vite.config.ts",
         "preview:build": "vite build --config preview/vite.config.ts"
     },
