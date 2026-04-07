@@ -1,6 +1,7 @@
 import React, { type CSSProperties, type ReactNode } from 'react';
 import { AssetBrowserClient } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 import { type AssetBrowserActionContext, type AssetBrowserWorkspaceCallbacks, type AssetBrowserWorkspaceState, type TreeNode } from './asset-browser-shared';
+export type AssetBrowserWorkspaceAppearance = 'default' | 'console';
 export interface AssetBrowserWorkspaceProps {
     client: AssetBrowserClient;
     assetSpace: string;
@@ -12,6 +13,7 @@ export interface AssetBrowserWorkspaceProps {
     title?: string;
     className?: string;
     style?: CSSProperties;
+    appearance?: AssetBrowserWorkspaceAppearance;
     enableEditing?: boolean;
     defaultDraftDescription?: string;
     callbacks?: AssetBrowserWorkspaceCallbacks;
@@ -26,4 +28,4 @@ export interface AssetBrowserWorkspaceProps {
     renderTreeNodeMeta?: (node: TreeNode) => ReactNode;
     renderTreeNodeActions?: (node: TreeNode) => ReactNode;
 }
-export declare function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVersionId, initialFolder, height, title, className, style, enableEditing, defaultDraftDescription, callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, }: AssetBrowserWorkspaceProps): React.JSX.Element;
+export declare function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVersionId, initialFolder, height, title, className, style, appearance, enableEditing, defaultDraftDescription, callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, }: AssetBrowserWorkspaceProps): React.JSX.Element;

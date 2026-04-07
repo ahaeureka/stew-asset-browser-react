@@ -1,0 +1,420 @@
+.stew-asset-workspace--console {
+    display: flex;
+    flex-direction: column;
+    background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 30%),
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 26%),
+        linear-gradient(180deg, #fcfefd 0%, #f3f7f7 100%);
+}
+
+.stew-asset-workspace__console-topbar {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 14px;
+    padding: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.stew-asset-workspace__console-titleblock {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.stew-asset-workspace__console-kicker {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #0f766e;
+}
+
+.stew-asset-workspace__console-heading {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+}
+
+.stew-asset-workspace__console-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.stew-asset-workspace__console-controls {
+    display: flex;
+    align-items: end;
+    gap: 10px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.stew-asset-workspace__console-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.stew-asset-workspace__console-control-group,
+.stew-asset-workspace__console-search-group {
+    display: grid;
+    gap: 4px;
+}
+
+.stew-asset-workspace__console-control-group {
+    flex: 0 0 210px;
+}
+
+.stew-asset-workspace__console-search-group {
+    flex: 1 1 220px;
+    min-width: min(100%, 220px);
+}
+
+.stew-asset-workspace__console-control-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.stew-asset-workspace__console-status {
+    position: relative;
+    margin: 0;
+    padding: 8px 12px 8px 38px;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.stew-asset-workspace__console-status::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    transform: translateY(-50%);
+}
+
+.stew-asset-workspace__console-status--neutral {
+    background: rgba(241, 245, 249, 0.84);
+    color: #334155;
+    box-shadow: inset 4px 0 0 #64748b;
+}
+
+.stew-asset-workspace__console-status--neutral::before {
+    background: #64748b;
+}
+
+.stew-asset-workspace__console-status--success {
+    background: rgba(236, 253, 245, 0.92);
+    color: #166534;
+    box-shadow: inset 4px 0 0 #16a34a;
+}
+
+.stew-asset-workspace__console-status--success::before {
+    background: #16a34a;
+}
+
+.stew-asset-workspace__console-status--warning {
+    background: rgba(255, 251, 235, 0.92);
+    color: #92400e;
+    box-shadow: inset 4px 0 0 #d97706;
+}
+
+.stew-asset-workspace__console-status--warning::before {
+    background: #d97706;
+}
+
+.stew-asset-workspace__console-status--error {
+    background: rgba(254, 242, 242, 0.94);
+    color: #b42318;
+    box-shadow: inset 4px 0 0 #dc2626;
+}
+
+.stew-asset-workspace__console-status--error::before {
+    background: #dc2626;
+}
+
+.stew-asset-workspace__console-body {
+    display: grid;
+    grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+    min-height: 0;
+    flex: 1;
+}
+
+.stew-asset-workspace__console-sidebar {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 1px solid rgba(148, 163, 184, 0.16);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(247, 250, 252, 0.94));
+}
+
+.stew-asset-workspace__console-sidebar-header {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.stew-asset-workspace__console-sidebar-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.stew-asset-workspace__console-sidebar-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.stew-asset-workspace__console-sidebar-copy,
+.stew-asset-workspace__console-version-card-copy {
+    font-size: 11px;
+    line-height: 1.45;
+    color: #64748b;
+}
+
+.stew-asset-workspace__console-sidebar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stew-asset-workspace__console-sidebar-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: rgba(15, 118, 110, 0.08);
+    color: #115e59;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.stew-asset-workspace__console-version-card {
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+    border-radius: 14px;
+    background: rgba(248, 250, 252, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.stew-asset-workspace__console-version-card-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #334155;
+}
+
+.stew-asset-workspace__console-tree-region {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.stew-asset-workspace__console-main {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(250, 252, 252, 0.98));
+}
+
+.stew-asset-workspace__console-main-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(255, 255, 255, 0.84);
+}
+
+.stew-asset-workspace__console-entry-meta {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.stew-asset-workspace__console-entry-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stew-asset-workspace__console-entry-copy {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+.stew-asset-workspace__console-view-switcher {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 12px;
+    background: rgba(148, 163, 184, 0.12);
+}
+
+.stew-asset-workspace__console-view-button {
+    appearance: none;
+    border: 0;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: transparent;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.stew-asset-workspace__console-view-button.is-active {
+    background: rgba(255, 255, 255, 0.96);
+    color: #0f172a;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.stew-asset-workspace__console-view-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.stew-asset-workspace__console-main-panel {
+    flex: 1;
+    min-height: 0;
+}
+
+.stew-asset-workspace__console-compare-note,
+.stew-asset-workspace__console-footer {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+    font-size: 12px;
+    color: #64748b;
+    background: rgba(248, 250, 252, 0.92);
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree .rc-tree-indent-unit {
+    width: 14px;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree .rc-tree-switcher {
+    width: 18px;
+    margin-right: 0;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree .rc-tree-node-content-wrapper {
+    width: calc(100% - 18px);
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__switcher,
+.stew-asset-workspace__console-tree-region .stew-asset-tree__switcher-spacer {
+    width: 14px;
+    height: 14px;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__chevron {
+    width: 10px;
+    height: 10px;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__row {
+    gap: 8px;
+    min-height: 28px;
+    padding: 3px 4px 3px 6px;
+    border-radius: 10px;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__leading {
+    gap: 8px;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__glyph {
+    width: 18px;
+    height: 18px;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__svg {
+    width: 18px;
+    height: 18px;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__label {
+    font-size: 12px;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__meta {
+    font-size: 10px;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__row[data-selected='true'] {
+    background: rgba(15, 118, 110, 0.08);
+    color: #0f172a;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__row[data-selected='true'] .stew-asset-tree__meta {
+    color: #0f766e;
+}
+
+.stew-asset-workspace__console-tree-region .stew-asset-tree__action-button {
+    border-color: rgba(15, 118, 110, 0.16);
+    background: rgba(255, 255, 255, 0.92);
+}
+
+@media (max-width: 1180px) {
+    .stew-asset-workspace__console-topbar {
+        grid-template-columns: 1fr;
+    }
+
+    .stew-asset-workspace__console-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 960px) {
+    .stew-asset-workspace__console-body {
+        grid-template-columns: 1fr;
+    }
+
+    .stew-asset-workspace__console-sidebar {
+        border-right: 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+        max-height: 44vh;
+    }
+
+    .stew-asset-workspace__console-main-topbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .stew-asset-workspace__console-view-switcher {
+        width: 100%;
+    }
+
+    .stew-asset-workspace__console-view-button {
+        flex: 1;
+    }
+}

@@ -18,10 +18,9 @@ import {
     pill,
     primaryButtonStyle,
     selectStyle,
-    shellStyle,
-    subHeaderStyle,
     type TreeNode,
 } from '../src/asset-browser-shared';
+import { AssetBrowserConsoleShell } from '../src/asset-browser-console-shell';
 import { AssetDiffViewer } from '../src/asset-diff-viewer';
 import { AssetEditor, type AssetEditorTab } from '../src/asset-editor';
 import { AssetTree } from '../src/asset-tree';
@@ -427,16 +426,22 @@ function PreviewApp() {
 
     return (
         <div className="preview-page">
-            <div className="preview-shell" style={{ ...shellStyle, height: 'min(860px, calc(100vh - 52px))' }}>
-                <div className="preview-workspace-topbar">
-                    <div className="preview-topbar-titleblock">
-                        <div className="preview-workspace-heading">{ASSET_SPACE} / {ASSET_ID}</div>
-                        <div className="preview-topbar-caption">资产工作台演示</div>
-                    </div>
-
-                    <div className="preview-topbar-controls">
-                        <div className="preview-control-group">
-                            <label className="preview-control-label" htmlFor="selected-version">版本</label>
+            <AssetBrowserConsoleShell
+                className="preview-shell"
+                height="min(860px, calc(100vh - 52px))"
+                heading={`${ASSET_SPACE} / ${ASSET_ID}`}
+                kicker="资产工作台演示"
+                badges={(
+                    <>
+                        {pill('状态', formatVersionStatus(selectedVersion?.status))}
+                        {pill('文件', String(Object.keys(selectedFiles).length))}
+                        {pill('变更', String(diffState.summary.totalChanges))}
+                    </>
+                )}
+                controls={(
+                    <>
+                        <label className="stew-asset-workspace__console-control-group" htmlFor="selected-version">
+                            <span className="stew-asset-workspace__console-control-label">版本</span>
                             <select
                                 id="selected-version"
                                 style={selectStyle}
@@ -452,10 +457,10 @@ function PreviewApp() {
                                     </option>
                                 ))}
                             </select>
-                        </div>
+                        </label>
 
-                        <div className="preview-control-group">
-                            <label className="preview-control-label" htmlFor="compare-version">对比</label>
+                        <label className="stew-asset-workspace__console-control-group" htmlFor="compare-version">
+                            <span className="stew-asset-workspace__console-control-label">对比</span>
                             <select
                                 id="compare-version"
                                 style={selectStyle}
@@ -469,10 +474,10 @@ function PreviewApp() {
                                     </option>
                                 ))}
                             </select>
-                        </div>
+                        </label>
 
-                        <label className="preview-search-wrap">
-                            <span className="preview-control-label">筛选</span>
+                        <label className="stew-asset-workspace__console-search-group">
+                            <span className="stew-asset-workspace__console-control-label">筛选</span>
                             <input
                                 value={searchText}
                                 onChange={(event) => setSearchText(event.target.value)}
@@ -480,313 +485,280 @@ function PreviewApp() {
                                 className="preview-search-input"
                             />
                         </label>
+                    </>
+                )}
+                actions={selectedVersion?.isDraft ? (
+                    <button
+                        type="button"
+                        style={primaryButtonStyle}
+                        onClick={() => {
+                            const draftVersion = selectedVersion;
+                            const draftSnapshot = snapshots[draftVersion.versionId];
+                            if (!draftSnapshot) {
+                                return;
+                            }
 
-                        <div className="preview-toolbar-actions">
-                            {selectedVersion?.isDraft ? (
-                                <button
-                                    type="button"
-                                    style={primaryButtonStyle}
-                                    onClick={() => {
-                                        const draftVersion = selectedVersion;
-                                        const draftSnapshot = snapshots[draftVersion.versionId];
-                                        if (!draftSnapshot) {
-                                            return;
-                                        }
+                            const publishedIndex = versions.filter((item) => !item.isDraft).length + 1;
+                            const nextReadyId = `v20260407-r${publishedIndex}`;
+                            const nextDraftId = `draft-20260407-r${publishedIndex}`;
+                            const timestamp = `2026-04-07T1${publishedIndex}:00:00Z`;
+                            const publishedSnapshot = createSnapshot(nextReadyId, draftSnapshot.files, timestamp, draftSnapshot.revisions);
+                            const nextDraftSnapshot = createSnapshot(nextDraftId, draftSnapshot.files, timestamp, draftSnapshot.revisions);
+                            const previousActiveVersionId = versions.find((item) => item.isActive && !item.isDraft)?.versionId ?? '';
+                            const nextVersions = [
+                                createVersionSummary({
+                                    versionId: nextDraftId,
+                                    status: 'draft',
+                                    description: '发布后自动生成的新草稿，可继续下一轮演示',
+                                    createdAt: timestamp,
+                                    createdBy: AUTHOR,
+                                    isActive: false,
+                                    isDraft: true,
+                                    baseVersionId: nextReadyId,
+                                }, nextDraftSnapshot),
+                                createVersionSummary({
+                                    versionId: nextReadyId,
+                                    status: 'ready',
+                                    description: '从演示草稿发布得到的正式版本',
+                                    createdAt: timestamp,
+                                    createdBy: AUTHOR,
+                                    isActive: true,
+                                    isDraft: false,
+                                    baseVersionId: previousActiveVersionId,
+                                }, publishedSnapshot),
+                                ...versions.map((version) => ({
+                                    ...version,
+                                    isActive: false,
+                                    isDraft: false,
+                                    status: version.status === 'draft' ? 'archived' : version.status,
+                                })),
+                            ];
 
-                                        const publishedIndex = versions.filter((item) => !item.isDraft).length + 1;
-                                        const nextReadyId = `v20260407-r${publishedIndex}`;
-                                        const nextDraftId = `draft-20260407-r${publishedIndex}`;
-                                        const timestamp = `2026-04-07T1${publishedIndex}:00:00Z`;
-                                        const publishedSnapshot = createSnapshot(nextReadyId, draftSnapshot.files, timestamp, draftSnapshot.revisions);
-                                        const nextDraftSnapshot = createSnapshot(nextDraftId, draftSnapshot.files, timestamp, draftSnapshot.revisions);
-                                        const previousActiveVersionId = versions.find((item) => item.isActive && !item.isDraft)?.versionId ?? '';
-                                        const nextVersions = [
-                                            createVersionSummary({
-                                                versionId: nextDraftId,
-                                                status: 'draft',
-                                                description: '发布后自动生成的新草稿，可继续下一轮演示',
-                                                createdAt: timestamp,
-                                                createdBy: AUTHOR,
-                                                isActive: false,
-                                                isDraft: true,
-                                                baseVersionId: nextReadyId,
-                                            }, nextDraftSnapshot),
-                                            createVersionSummary({
-                                                versionId: nextReadyId,
-                                                status: 'ready',
-                                                description: '从演示草稿发布得到的正式版本',
-                                                createdAt: timestamp,
-                                                createdBy: AUTHOR,
-                                                isActive: true,
-                                                isDraft: false,
-                                                baseVersionId: previousActiveVersionId,
-                                            }, publishedSnapshot),
-                                            ...versions.map((version) => ({
-                                                ...version,
-                                                isActive: false,
-                                                isDraft: false,
-                                                status: version.status === 'draft' ? 'archived' : version.status,
-                                            })),
-                                        ];
-
-                                        setVersions(nextVersions);
-                                        setSnapshots((current) => ({
-                                            ...current,
-                                            [nextReadyId]: publishedSnapshot,
-                                            [nextDraftId]: nextDraftSnapshot,
-                                        }));
-                                        setSelectedVersionId(nextDraftId);
-                                        setCompareVersionId(nextReadyId);
-                                        setEditorSessions({});
-                                        setWorkspaceView('edit');
-                                        setStatus({ tone: 'success', text: `演示发布完成，已生成正式版本 ${nextReadyId}，并自动续开新的草稿 ${nextDraftId}。` });
-                                    }}
-                                >
-                                    模拟发布
-                                </button>
-                            ) : null}
-                        </div>
+                            setVersions(nextVersions);
+                            setSnapshots((current) => ({
+                                ...current,
+                                [nextReadyId]: publishedSnapshot,
+                                [nextDraftId]: nextDraftSnapshot,
+                            }));
+                            setSelectedVersionId(nextDraftId);
+                            setCompareVersionId(nextReadyId);
+                            setEditorSessions({});
+                            setWorkspaceView('edit');
+                            setStatus({ tone: 'success', text: `演示发布完成，已生成正式版本 ${nextReadyId}，并自动续开新的草稿 ${nextDraftId}。` });
+                        }}
+                    >
+                        模拟发布
+                    </button>
+                ) : null}
+                status={status}
+                sidebarTitle="资源目录"
+                sidebarSubtitle={`${countTreeNodes(filteredTreeNodes)} 项`}
+                sidebarActions={(
+                    <>
+                        <span className="stew-asset-workspace__console-sidebar-pill">Mock Data</span>
+                        <button
+                            type="button"
+                            className="preview-sidebar-export"
+                            style={{ ...buttonBaseStyle, padding: '4px 10px', fontSize: 11 }}
+                            onClick={() => {
+                                const exportTarget = selectedPath || selectedVersion?.versionId || '当前版本';
+                                setStatus({ tone: 'success', text: `已为 ${exportTarget} 生成演示导出结果，当前仅做本地界面反馈，不触发真实下载。` });
+                            }}
+                        >
+                            导出
+                        </button>
+                    </>
+                )}
+                sidebarCardTitle={`${selectedVersion?.versionId || '暂无版本'} · ${formatVersionStatus(selectedVersion?.status)}`}
+                sidebarCardBody={selectedVersion?.description || '暂无版本说明'}
+                sidebarContent={(
+                    <AssetTree
+                        title="目录"
+                        nodes={filteredTreeNodes}
+                        expandedPaths={expandedPaths}
+                        selectedPath={selectedPath}
+                        compact
+                        onSelect={(path) => setSelectedPath(path)}
+                        onToggle={(path) => {
+                            setExpandedPaths((current) => {
+                                const next = new Set(current);
+                                if (next.has(path)) {
+                                    next.delete(path);
+                                } else {
+                                    next.add(path);
+                                }
+                                return next;
+                            });
+                        }}
+                        renderNodeMeta={(node) => renderNodeMeta(node, diffMap, selectedFiles)}
+                    />
+                )}
+                mainTitle={selectedNode?.name || '请选择资源'}
+                mainSubtitle={[
+                    `${selectedPath || '/'} · ${selectedVersion?.versionId || '-'}`,
+                    compareVersion?.versionId ? `对比 ${compareVersion.versionId}` : '',
+                    dirty ? '有未保存修改' : '已保存',
+                ].filter(Boolean).join(' · ')}
+                viewSwitcher={(
+                    <div className="stew-asset-workspace__console-view-switcher" role="tablist" aria-label="Workspace view">
+                        <button
+                            type="button"
+                            className={`stew-asset-workspace__console-view-button${workspaceView === 'edit' ? ' is-active' : ''}`}
+                            onClick={() => setWorkspaceView('edit')}
+                        >
+                            编辑
+                        </button>
+                        <button
+                            type="button"
+                            className={`stew-asset-workspace__console-view-button${workspaceView === 'preview' ? ' is-active' : ''}`}
+                            disabled={!canPreviewDocument}
+                            onClick={() => setWorkspaceView('preview')}
+                        >
+                            预览
+                        </button>
+                        <button
+                            type="button"
+                            className={`stew-asset-workspace__console-view-button${workspaceView === 'diff' ? ' is-active' : ''}`}
+                            onClick={() => setWorkspaceView('diff')}
+                        >
+                            差异
+                        </button>
                     </div>
-
-                    <div className="preview-workspace-badges">
-                        {pill('状态', formatVersionStatus(selectedVersion?.status))}
-                        {pill('文件', String(Object.keys(selectedFiles).length))}
-                        {pill('变更', String(diffState.summary.totalChanges))}
+                )}
+                mainContent={workspaceView === 'diff' ? (
+                    <div className="preview-diff-shell">
+                        <AssetDiffViewer
+                            label={compareVersionId ? `${selectedVersionId} vs ${compareVersionId}` : `${selectedVersionId} without compare target`}
+                            language={currentLanguage}
+                            summary={diffState.summary}
+                            entries={diffState.entries}
+                            selectedPath={selectedPath}
+                            originalText={compareSnapshot?.files[selectedPath] ?? ''}
+                            modifiedText={selectedEntry?.entryKind === 'file' ? (selectedFiles[selectedPath] ?? '') : ''}
+                            compact
+                            onSelectEntry={(path) => {
+                                setSelectedPath(path);
+                                setStatus({ tone: 'neutral', text: `已定位到变更资源 ${path}，方便继续审阅具体差异。` });
+                            }}
+                        />
                     </div>
-                </div>
+                ) : (
+                    <div className="preview-editor-shell">
+                        <AssetEditor
+                            selectedPath={selectedPath}
+                            selectedEntry={selectedEntry}
+                            modelPath={selectedPath ? `file:///preview/${selectedVersionId}${selectedPath}` : undefined}
+                            language={currentLanguage}
+                            value={editorText}
+                            canEdit={canEdit}
+                            dirty={dirty}
+                            saving={false}
+                            entryRevision={entryRevision}
+                            openTabs={openTabs}
+                            compact
+                            mode={workspaceView === 'preview' ? 'preview' : 'edit'}
+                            showModeSwitch={false}
+                            onChange={(value) => {
+                                if (!selectedEntry || selectedEntry.entryKind !== 'file') {
+                                    return;
+                                }
+                                const nextDirty = value !== originalText;
+                                setEditorText(value);
+                                setEditorSessions((current) => ({
+                                    ...current,
+                                    [currentSessionKey]: {
+                                        versionId: selectedVersionId,
+                                        path: selectedPath,
+                                        text: value,
+                                        originalText,
+                                        dirty: nextDirty,
+                                        entryRevision,
+                                    },
+                                }));
+                            }}
+                            onSave={canEdit ? () => {
+                                if (!selectedEntry || selectedEntry.entryKind !== 'file' || !selectedSnapshot) {
+                                    return;
+                                }
 
-                <div className={`preview-status preview-status--${status.tone}`}>{status.text}</div>
-
-                <div className="preview-workspace-body">
-                    <aside className="preview-sidebar">
-                        <div className="preview-sidebar-topbar">
-                            <div className="preview-sidebar-topline">
-                                <span className="preview-card-label">资源目录</span>
-                                <div className="preview-sidebar-actions">
-                                    <span className="preview-sidebar-status">{countTreeNodes(filteredTreeNodes)} 项</span>
+                                const nextSnapshot = updateSnapshotFile(selectedSnapshot, selectedPath, editorText);
+                                setSnapshots((current) => ({
+                                    ...current,
+                                    [selectedVersionId]: nextSnapshot,
+                                }));
+                                setVersions((current) => current.map((version) => (
+                                    version.versionId === selectedVersionId
+                                        ? createVersionSummary({
+                                            versionId: version.versionId,
+                                            status: version.status,
+                                            description: version.description,
+                                            createdAt: version.createdAt,
+                                            createdBy: version.createdBy,
+                                            isActive: version.isActive,
+                                            isDraft: version.isDraft,
+                                            baseVersionId: version.baseVersionId,
+                                        }, nextSnapshot)
+                                        : version
+                                )));
+                                setOriginalText(editorText);
+                                setEntryRevision((current) => current + 1);
+                                setEditorSessions((current) => ({
+                                    ...current,
+                                    [currentSessionKey]: {
+                                        versionId: selectedVersionId,
+                                        path: selectedPath,
+                                        text: editorText,
+                                        originalText: editorText,
+                                        dirty: false,
+                                        entryRevision: (current[currentSessionKey]?.entryRevision ?? selectedEntry.entryRevision) + 1,
+                                    },
+                                }));
+                                setStatus({ tone: 'success', text: `${selectedPath} 的演示修改已保存到 ${selectedVersionId}。` });
+                            } : undefined}
+                            onSelectTab={(path) => setSelectedPath(path)}
+                            onCloseTab={(path) => {
+                                setOpenPaths((current) => current.filter((item) => item !== path));
+                                if (selectedPath === path) {
+                                    const nextOpenPath = openPaths.find((item) => item !== path) || findFirstSelectablePath(treeNodes);
+                                    setSelectedPath(nextOpenPath);
+                                }
+                            }}
+                            actions={(
+                                <div className="preview-inline-actions">
                                     <button
                                         type="button"
-                                        className="preview-sidebar-export"
-                                        style={{ ...buttonBaseStyle, padding: '4px 10px', fontSize: 11 }}
+                                        className="preview-toolbar-button"
+                                        disabled={!dirty}
                                         onClick={() => {
-                                            const exportTarget = selectedPath || selectedVersion?.versionId || '当前版本';
-                                            setStatus({ tone: 'success', text: `已为 ${exportTarget} 生成演示导出结果，当前仅做本地界面反馈，不触发真实下载。` });
-                                        }}
-                                    >
-                                        导出
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="preview-version-card-title">{selectedVersion?.versionId || '暂无版本'} · {formatVersionStatus(selectedVersion?.status)}</div>
-                            <div className="preview-version-card-copy">{selectedVersion?.description || '暂无版本说明'}</div>
-                        </div>
-
-                        <div className="preview-tree-region">
-                            <AssetTree
-                                title="目录"
-                                nodes={filteredTreeNodes}
-                                expandedPaths={expandedPaths}
-                                selectedPath={selectedPath}
-                                compact
-                                onSelect={(path) => setSelectedPath(path)}
-                                onToggle={(path) => {
-                                    setExpandedPaths((current) => {
-                                        const next = new Set(current);
-                                        if (next.has(path)) {
-                                            next.delete(path);
-                                        } else {
-                                            next.add(path);
-                                        }
-                                        return next;
-                                    });
-                                }}
-                                renderNodeMeta={(node) => renderNodeMeta(node, diffMap, selectedFiles)}
-                            />
-                        </div>
-                    </aside>
-
-                    <section className="preview-main">
-                        <div style={{ ...subHeaderStyle, padding: '10px 12px', gap: 10 }}>
-                            <div className="preview-panel-meta-block">
-                                <div className="preview-panel-title">{selectedNode?.name || '请选择资源'}</div>
-                                <div className="preview-panel-subtitle">
-                                    {selectedPath || '/'} · {selectedVersion?.versionId || '-'}
-                                    {compareVersion?.versionId ? ` · 对比 ${compareVersion.versionId}` : ''}
-                                    {dirty ? ' · 有未保存修改' : ' · 已保存'}
-                                </div>
-                            </div>
-                            <div className="preview-view-switcher" role="tablist" aria-label="Workspace view">
-                                <button
-                                    type="button"
-                                    className={`preview-view-switcher__button${workspaceView === 'edit' ? ' is-active' : ''}`}
-                                    onClick={() => setWorkspaceView('edit')}
-                                >
-                                    编辑
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`preview-view-switcher__button${workspaceView === 'preview' ? ' is-active' : ''}`}
-                                    disabled={!canPreviewDocument}
-                                    onClick={() => setWorkspaceView('preview')}
-                                >
-                                    预览
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`preview-view-switcher__button${workspaceView === 'diff' ? ' is-active' : ''}`}
-                                    onClick={() => setWorkspaceView('diff')}
-                                >
-                                    差异
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className={`preview-main-body${workspaceView === 'diff' ? ' has-diff' : ''}`}>
-                            {workspaceView === 'diff' ? (
-                                <div className="preview-diff-shell">
-                                    <AssetDiffViewer
-                                        label={compareVersionId ? `${selectedVersionId} vs ${compareVersionId}` : `${selectedVersionId} without compare target`}
-                                        language={currentLanguage}
-                                        summary={diffState.summary}
-                                        entries={diffState.entries}
-                                        selectedPath={selectedPath}
-                                        originalText={compareSnapshot?.files[selectedPath] ?? ''}
-                                        modifiedText={selectedEntry?.entryKind === 'file' ? (selectedFiles[selectedPath] ?? '') : ''}
-                                        compact
-                                        onSelectEntry={(path) => {
-                                            setSelectedPath(path);
-                                            setStatus({ tone: 'neutral', text: `已定位到变更资源 ${path}，方便继续审阅具体差异。` });
-                                        }}
-                                    />
-                                </div>
-                            ) : (
-                                <div className="preview-editor-shell">
-                                    <AssetEditor
-                                        selectedPath={selectedPath}
-                                        selectedEntry={selectedEntry}
-                                        modelPath={selectedPath ? `file:///preview/${selectedVersionId}${selectedPath}` : undefined}
-                                        language={currentLanguage}
-                                        value={editorText}
-                                        canEdit={canEdit}
-                                        dirty={dirty}
-                                        saving={false}
-                                        entryRevision={entryRevision}
-                                        openTabs={openTabs}
-                                        compact
-                                        mode={workspaceView === 'preview' ? 'preview' : 'edit'}
-                                        showModeSwitch={false}
-                                        onChange={(value) => {
                                             if (!selectedEntry || selectedEntry.entryKind !== 'file') {
                                                 return;
                                             }
-                                            const nextDirty = value !== originalText;
-                                            setEditorText(value);
+                                            const persistedText = selectedSnapshot?.files[selectedPath] ?? '';
+                                            setEditorText(persistedText);
+                                            setOriginalText(persistedText);
                                             setEditorSessions((current) => ({
                                                 ...current,
                                                 [currentSessionKey]: {
                                                     versionId: selectedVersionId,
                                                     path: selectedPath,
-                                                    text: value,
-                                                    originalText,
-                                                    dirty: nextDirty,
-                                                    entryRevision,
-                                                },
-                                            }));
-                                        }}
-                                        onSave={canEdit ? () => {
-                                            if (!selectedEntry || selectedEntry.entryKind !== 'file' || !selectedSnapshot) {
-                                                return;
-                                            }
-
-                                            const nextSnapshot = updateSnapshotFile(selectedSnapshot, selectedPath, editorText);
-                                            setSnapshots((current) => ({
-                                                ...current,
-                                                [selectedVersionId]: nextSnapshot,
-                                            }));
-                                            setVersions((current) => current.map((version) => (
-                                                version.versionId === selectedVersionId
-                                                    ? createVersionSummary({
-                                                        versionId: version.versionId,
-                                                        status: version.status,
-                                                        description: version.description,
-                                                        createdAt: version.createdAt,
-                                                        createdBy: version.createdBy,
-                                                        isActive: version.isActive,
-                                                        isDraft: version.isDraft,
-                                                        baseVersionId: version.baseVersionId,
-                                                    }, nextSnapshot)
-                                                    : version
-                                            )));
-                                            setOriginalText(editorText);
-                                            setEntryRevision((current) => current + 1);
-                                            setEditorSessions((current) => ({
-                                                ...current,
-                                                [currentSessionKey]: {
-                                                    versionId: selectedVersionId,
-                                                    path: selectedPath,
-                                                    text: editorText,
-                                                    originalText: editorText,
+                                                    text: persistedText,
+                                                    originalText: persistedText,
                                                     dirty: false,
-                                                    entryRevision: (current[currentSessionKey]?.entryRevision ?? selectedEntry.entryRevision) + 1,
+                                                    entryRevision: selectedEntry.entryRevision,
                                                 },
                                             }));
-                                            setStatus({ tone: 'success', text: `${selectedPath} 的演示修改已保存到 ${selectedVersionId}。` });
-                                        } : undefined}
-                                        onSelectTab={(path) => setSelectedPath(path)}
-                                        onCloseTab={(path) => {
-                                            setOpenPaths((current) => current.filter((item) => item !== path));
-                                            if (selectedPath === path) {
-                                                const nextOpenPath = openPaths.find((item) => item !== path) || findFirstSelectablePath(treeNodes);
-                                                setSelectedPath(nextOpenPath);
-                                            }
+                                            setStatus({ tone: 'warning', text: `${selectedPath} 已恢复到当前版本内容，未保存的演示修改已撤销。` });
                                         }}
-                                        actions={(
-                                            <div className="preview-inline-actions">
-                                                <button
-                                                    type="button"
-                                                    className="preview-toolbar-button"
-                                                    disabled={!dirty}
-                                                    onClick={() => {
-                                                        if (!selectedEntry || selectedEntry.entryKind !== 'file') {
-                                                            return;
-                                                        }
-                                                        const persistedText = selectedSnapshot?.files[selectedPath] ?? '';
-                                                        setEditorText(persistedText);
-                                                        setOriginalText(persistedText);
-                                                        setEditorSessions((current) => ({
-                                                            ...current,
-                                                            [currentSessionKey]: {
-                                                                versionId: selectedVersionId,
-                                                                path: selectedPath,
-                                                                text: persistedText,
-                                                                originalText: persistedText,
-                                                                dirty: false,
-                                                                entryRevision: selectedEntry.entryRevision,
-                                                            },
-                                                        }));
-                                                        setStatus({ tone: 'warning', text: `${selectedPath} 已恢复到当前版本内容，未保存的演示修改已撤销。` });
-                                                    }}
-                                                >
-                                                    撤销修改
-                                                </button>
-                                            </div>
-                                        )}
-                                    />
+                                    >
+                                        撤销修改
+                                    </button>
                                 </div>
                             )}
-                        </div>
-                    </section>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function PreviewFact({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="preview-fact">
-            <span className="preview-fact-label">{label}</span>
-            <strong>{value}</strong>
+                        />
+                    </div>
+                )}
+                compareNote={compareVersion?.versionId ? `当前对比基线：${compareVersion.versionId}` : undefined}
+            />
         </div>
     );
 }
@@ -891,6 +863,8 @@ function buildDiffState(currentFiles: Record<string, string>, compareFiles: Reco
         modifiedCount: 0,
         renamedCount: 0,
         typeChangedCount: 0,
+        textDiffCount: 0,
+        binaryChangeCount: 0,
     };
 
     for (const path of allPaths) {
@@ -907,14 +881,27 @@ function buildDiffState(currentFiles: Record<string, string>, compareFiles: Reco
                 : 'modified';
         entries.push({
             path,
+            oldPath: path,
             changeType,
+            oldEntryKind: compare === undefined ? '' : 'file',
+            newEntryKind: current === undefined ? '' : 'file',
+            oldFileId: compare === undefined ? '' : `mock:${path}`,
+            newFileId: current === undefined ? '' : `mock:${path}`,
             oldChecksum: compare ? checksumFor(compare) : '',
             newChecksum: current ? checksumFor(current) : '',
             oldSizeBytes: byteLength(compare ?? ''),
             newSizeBytes: byteLength(current ?? ''),
+            isText: true,
+            languageHint: FILE_METADATA[path]?.languageHint ?? 'plaintext',
+            textDiffStatus: 'ready',
+            unifiedDiff: '',
+            diffTruncated: false,
+            oldPreview: compare ?? '',
+            newPreview: current ?? '',
             diffDetailAvailable: true,
         });
         summary.totalChanges += 1;
+        summary.textDiffCount += 1;
         if (changeType === 'added') summary.addedCount += 1;
         if (changeType === 'removed') summary.removedCount += 1;
         if (changeType === 'modified') summary.modifiedCount += 1;
@@ -1004,6 +991,7 @@ function directoryEntry(path: string, timestamp: string): AssetTreeEntry {
         contentType: 'inode/directory',
         sizeBytes: 0,
         checksum: '',
+        hasChildren: true,
         isTextPreviewable: false,
         languageHint: '',
         entryRevision: 0,
@@ -1023,6 +1011,7 @@ function fileEntry(path: string, text: string, revision: number, timestamp: stri
         contentType: metadata.contentType,
         sizeBytes: byteLength(text),
         checksum: checksumFor(text),
+        hasChildren: false,
         isTextPreviewable: true,
         languageHint: metadata.languageHint,
         entryRevision: revision,

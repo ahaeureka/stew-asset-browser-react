@@ -4,7 +4,8 @@ Stew 业务资产浏览 React UI SDK。
 
 面向业务前端提供两层能力：
 
-- `AssetBrowserWorkspace`：开箱即用的三栏工作台，内置文件树、Monaco 编辑器、Diff、草稿创建/保存/发布流程
+- `AssetBrowserWorkspace`：默认风格的完整工作台，内置文件树、Monaco 编辑器、Diff、草稿创建/保存/发布流程
+- `AssetBrowserConsoleWorkspace`：直接复用 preview 页那套更偏业务控制台风格的成品工作台
 - `AssetTree`、`AssetEditor`、`AssetDiffViewer`：便于业务侧按需组合的细粒度组件
 
 ## 安装
@@ -26,6 +27,8 @@ Stew 业务资产浏览 React UI SDK。
 
 这个包现在自带一个纯前端 mock 数据预览页，用来调目录树、编辑区和按钮视觉，不依赖后端接口。
 
+如果你的目标不是做 mock，而是让业务前端直接拿到 preview 类似的成品页面效果，优先使用 `AssetBrowserConsoleWorkspace`，不要直接复制 `preview/main.tsx`。
+
 ```bash
 cd /app/stew-asset-browser-react
 pnpm preview
@@ -45,7 +48,7 @@ pnpm preview:build
 
 import { useMemo } from "react";
 import { AssetBrowserClient } from "protobuf-typescript-client-gen/dist/asset_browser_client";
-import { AssetBrowserWorkspace } from "stew-asset-browser-react";
+import { AssetBrowserConsoleWorkspace } from "stew-asset-browser-react";
 
 export default function AssetPage() {
   const client = useMemo(
@@ -57,7 +60,7 @@ export default function AssetPage() {
   );
 
   return (
-    <AssetBrowserWorkspace
+    <AssetBrowserConsoleWorkspace
       client={client}
       assetSpace="configs"
       assetId="my-app"
@@ -79,6 +82,81 @@ export default function AssetPage() {
 | `height` | `number \| string` | 否 | 工作区整体高度 | `720`、`"80vh"` |
 
 如果只想先把资产浏览面板挂上页面，通常只需要这 4 个参数。
+
+## 直接复用 preview 页面效果
+
+`AssetBrowserConsoleWorkspace` 是给业务前端使用的稳定入口，它把 preview 里沉淀出来的几项能力正式做成了 SDK API：
+
+- 中文控制台式顶部栏与状态条
+- 左侧资源目录区内置搜索、版本说明和导出入口
+- 右侧统一的“编辑 / 预览 / 差异”切换
+- 移动端下自动收敛成上下结构，而不是要求业务侧自己再写一层壳
+
+示例：
+
+```tsx
+"use client";
+
+import { useMemo } from "react";
+import { AssetBrowserClient } from "protobuf-typescript-client-gen/dist/asset_browser_client";
+import { AssetBrowserConsoleWorkspace } from "stew-asset-browser-react";
+
+export default function AssetConsolePage() {
+  const client = useMemo(
+    () => new AssetBrowserClient({
+      baseUrl: "http://localhost:3012",
+      timeout: 15000,
+    }),
+    [],
+  );
+
+  return (
+    <AssetBrowserConsoleWorkspace
+      client={client}
+      assetSpace="configs"
+      assetId="gateway-routing"
+      title="网关路由资产中心"
+      height="calc(100vh - 96px)"
+    />
+  );
+}
+```
+
+如果你已经接了 `AssetBrowserWorkspace`，但只是想切换成 preview 的产品化样式，也可以直接传：
+
+```tsx
+<AssetBrowserWorkspace
+  client={client}
+  assetSpace="configs"
+  assetId="gateway-routing"
+  appearance="console"
+/>
+```
+
+### 什么时候用 ConsoleWorkspace，什么时候用 ConsoleShell
+
+这两个名字看起来接近，但职责不同。
+
+`AssetBrowserConsoleWorkspace` 适合绝大多数业务接入场景：
+
+- 你已经使用或准备使用 `AssetBrowserClient` 直连后端资产接口
+- 你需要的是“可直接上线”的成品工作台，而不是自己再拼目录树、编辑器和 Diff
+- 你希望直接拿到草稿创建、保存、发布、导出、版本切换这些完整行为
+- 你只是想复用 preview 的页面效果，而不是重写内部状态管理
+
+`AssetBrowserConsoleShell` 适合少数高级定制场景：
+
+- 你只想复用 console 页面骨架和视觉层，不想复用默认的数据流
+- 你的目录树、编辑区、Diff 或顶部动作来自你自己的状态管理、BFF、mock 系统或混合数据源
+- 你要把现有业务组件塞进同一套控制台壳子里，而不是接受 `AssetBrowserWorkspace` 的完整工作流
+- 你明确知道自己在接管 `sidebarContent`、`mainContent`、`viewSwitcher`、`actions` 这些插槽
+
+可以简单理解成：
+
+- `AssetBrowserConsoleWorkspace` = 带默认行为的成品页
+- `AssetBrowserConsoleShell` = 只提供外层布局和视觉约束的页面壳
+
+如果没有很强的自定义理由，优先选 `AssetBrowserConsoleWorkspace`。只有当你确认默认 workspace 的数据流和交互边界已经不适合你的页面时，再退到 `AssetBrowserConsoleShell`。
 
 ## AssetBrowserClient 入参说明
 

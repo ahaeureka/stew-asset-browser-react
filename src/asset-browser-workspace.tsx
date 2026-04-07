@@ -5,6 +5,7 @@ import React, {
     type ReactNode,
     startTransition,
     useEffect,
+    useMemo,
     useRef,
     useState,
 } from 'react';
@@ -47,6 +48,7 @@ import {
     toolbarStyle,
     type TreeNode,
 } from './asset-browser-shared';
+import { AssetBrowserConsoleShell } from './asset-browser-console-shell';
 import { AssetTree } from './asset-tree';
 
 function Group(props: GroupProps): React.ReactElement {
@@ -85,6 +87,10 @@ interface EditorSession {
     dirty: boolean;
 }
 
+export type AssetBrowserWorkspaceAppearance = 'default' | 'console';
+
+type AssetBrowserConsoleView = 'edit' | 'preview' | 'diff';
+
 export interface AssetBrowserWorkspaceProps {
     client: AssetBrowserClient;
     assetSpace: string;
@@ -96,6 +102,7 @@ export interface AssetBrowserWorkspaceProps {
     title?: string;
     className?: string;
     style?: CSSProperties;
+    appearance?: AssetBrowserWorkspaceAppearance;
     enableEditing?: boolean;
     defaultDraftDescription?: string;
     callbacks?: AssetBrowserWorkspaceCallbacks;
@@ -121,6 +128,7 @@ export function AssetBrowserWorkspace({
     title,
     className,
     style,
+    appearance = 'default',
     enableEditing = true,
     defaultDraftDescription = 'Edit assets',
     callbacks,
@@ -155,6 +163,8 @@ export function AssetBrowserWorkspace({
     const [saving, setSaving] = useState(false);
     const [status, setStatus] = useState<StatusMessage | null>(null);
     const [showDiff, setShowDiff] = useState(false);
+    const [treeQuery, setTreeQuery] = useState('');
+    const [consoleView, setConsoleView] = useState<AssetBrowserConsoleView>('edit');
     const [diffSummary, setDiffSummary] = useState<AssetDiffSummary | null>(null);
     const [diffEntries, setDiffEntries] = useState<AssetDiffEntry[]>([]);
     const [diffLeftText, setDiffLeftText] = useState('');
@@ -164,6 +174,7 @@ export function AssetBrowserWorkspace({
     const [exporting, setExporting] = useState(false);
     const mountedRef = useRef(true);
     const editorSessionsRef = useRef<Record<string, EditorSession>>({});
+    const isConsole = appearance === 'console';
 
     useEffect(() => {
         editorSessionsRef.current = editorSessions;
@@ -266,6 +277,13 @@ export function AssetBrowserWorkspace({
     }, [showDiff, selectedPath, selectedVersionId, compareVersionId]);
 
     useEffect(() => {
+        if (!isConsole || consoleView !== 'preview' || editorLanguage === 'markdown') {
+            return;
+        }
+        setConsoleView('edit');
+    }, [consoleView, editorLanguage, isConsole]);
+
+    useEffect(() => {
         void callbacks?.onSelectionChange?.(createActionContext());
     }, [callbacks, selectedEntry, selectedPath]);
 
@@ -296,6 +314,24 @@ export function AssetBrowserWorkspace({
         const text = error instanceof Error ? error.message : 'Unknown error';
         setStatus({ tone: 'error', text });
         onError?.(error);
+    }
+
+    function setDiffVisible(nextVisible: boolean) {
+        setShowDiff(nextVisible);
+        if (!isConsole) {
+            return;
+        }
+        setConsoleView((current) => {
+            if (nextVisible) {
+                return 'diff';
+            }
+            return current === 'diff' ? 'edit' : current;
+        });
+    }
+
+    function setConsoleWorkspaceView(nextView: AssetBrowserConsoleView) {
+        setConsoleView(nextView);
+        setShowDiff(nextView === 'diff');
     }
 
     async function runAction(action: () => Promise<void>) {
@@ -601,7 +637,7 @@ export function AssetBrowserWorkspace({
             setStatus({ tone: 'success', text: `Draft discarded: ${draftVersionId}` });
             await loadWorkspace();
             setSelectedVersionId(fallbackVersionId);
-            setShowDiff(false);
+            setDiffVisible(false);
             await callbacks?.onAfterDiscardDraft?.(createActionContext({
                 selectedVersionId: fallbackVersionId,
                 showDiff: false,
@@ -629,7 +665,7 @@ export function AssetBrowserWorkspace({
             setStatus({ tone: 'success', text: `Published version: ${result.publishedVersion.versionId}` });
             await loadWorkspace();
             setSelectedVersionId(result.publishedVersion.versionId);
-            setShowDiff(false);
+            setDiffVisible(false);
             await callbacks?.onAfterPublishDraft?.(result, createActionContext({
                 collection: result.collection,
                 selectedVersionId: result.publishedVersion.versionId,
@@ -786,12 +822,310 @@ export function AssetBrowserWorkspace({
     const selectedVersion = versions.find((item) => item.versionId === selectedVersionId) ?? null;
     const selectedCompareVersion = versions.find((item) => item.versionId === compareVersionId) ?? null;
     const isDraftSelected = Boolean(selectedVersion?.isDraft);
+    const canPreviewMarkdown = editorLanguage === 'markdown' && selectedEntry?.entryKind === 'file';
     const canEdit = enableEditing
         && isDraftSelected
         && selectedEntry?.entryKind === 'file'
         && Boolean(selectedEntry?.isTextPreviewable);
     const heading = title || collection?.displayName || `${assetSpace}/${assetId}`;
     const actionContext = createActionContext();
+    const filteredTreeNodes = useMemo(
+        () => isConsole ? filterTreeNodes(treeNodes, treeQuery) : treeNodes,
+        [isConsole, treeNodes, treeQuery],
+    );
+    const visibleTreeCount = useMemo(() => countTreeNodes(filteredTreeNodes), [filteredTreeNodes]);
+    const visibleExpandedPaths = useMemo(
+        () => treeQuery.trim() ? collectInitialExpanded(filteredTreeNodes) : expandedPaths,
+        [expandedPaths, filteredTreeNodes, treeQuery],
+    );
+    const topbarButtonStyle = isConsole
+        ? {
+            ...buttonBaseStyle,
+            minHeight: 38,
+            padding: '0 14px',
+            borderRadius: 12,
+            borderColor: 'rgba(15,118,110,0.18)',
+            background: 'rgba(255,255,255,0.94)',
+        }
+        : buttonBaseStyle;
+    const topbarPrimaryButtonStyle = isConsole
+        ? {
+            ...primaryButtonStyle,
+            minHeight: 38,
+            padding: '0 14px',
+            borderRadius: 12,
+            borderColor: 'rgba(15,118,110,0.24)',
+            background: 'linear-gradient(135deg, #0f766e, #0f766e 45%, #0f172a 100%)',
+        }
+        : primaryButtonStyle;
+    const topbarSelectStyle = isConsole
+        ? {
+            ...selectStyle,
+            minHeight: 38,
+            borderRadius: 12,
+            borderColor: 'rgba(148,163,184,0.22)',
+            background: 'rgba(255,255,255,0.94)',
+        }
+        : selectStyle;
+    const consoleSearchInputStyle: CSSProperties = {
+        minHeight: 38,
+        padding: '0 12px',
+        borderRadius: 12,
+        border: '1px solid rgba(148,163,184,0.22)',
+        background: 'rgba(255,255,255,0.94)',
+        color: '#0f172a',
+        fontSize: 12,
+        outline: 'none',
+    };
+    const versionDescription = selectedVersion?.description || '当前版本暂无说明，可继续从目录树选择资源查看内容。';
+    const versionMeta = selectedVersion
+        ? `${selectedVersion.createdBy || 'system'} · ${formatWorkspaceTimestamp(selectedVersion.createdAt)}`
+        : '加载版本信息中';
+    const entryMeta = selectedEntry
+        ? `${selectedEntry.contentType || 'text/plain'} · ${selectedEntry.entryKind === 'file' ? `${selectedEntry.sizeBytes} B` : '目录'}${selectedEntry.entryKind === 'file' ? ` · rev ${entryRevision}` : ''}`
+        : '从左侧目录树选择资源后，可查看正文、预览或差异。';
+    const selectedPathLabel = selectedPath || '请选择资源文件';
+    const activeEditorMode = isConsole && consoleView === 'preview' ? 'preview' : 'edit';
+
+    if (isConsole) {
+        return (
+            <AssetBrowserConsoleShell
+                className={className}
+                style={style}
+                height={height}
+                heading={heading}
+                kicker="业务资产浏览"
+                badges={(
+                    <>
+                        {pill('空间', assetSpace)}
+                        {pill('资产', assetId)}
+                        {pill('模式', isDraftSelected ? '草稿' : '只读')}
+                        {collection?.activeVersionId ? pill('生效版本', collection.activeVersionId) : null}
+                    </>
+                )}
+                controls={(
+                    <>
+                        {renderToolbarStart ? renderToolbarStart(actionContext) : null}
+                        <label className="stew-asset-workspace__console-control-group">
+                            <span className="stew-asset-workspace__console-control-label">当前版本</span>
+                            <select value={selectedVersionId} onChange={(event) => setSelectedVersionId(event.target.value)} style={topbarSelectStyle}>
+                                {versions.map((version) => (
+                                    <option key={version.versionId} value={version.versionId}>
+                                        {version.versionId} · {version.status}{version.isActive ? ' · active' : ''}{version.isDraft ? ' · draft' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="stew-asset-workspace__console-control-group">
+                            <span className="stew-asset-workspace__console-control-label">对比基线</span>
+                            <select value={compareVersionId} onChange={(event) => setCompareVersionId(event.target.value)} style={topbarSelectStyle}>
+                                <option value="">不对比</option>
+                                {versions
+                                    .filter((version) => version.versionId !== selectedVersionId)
+                                    .map((version) => (
+                                        <option key={version.versionId} value={version.versionId}>
+                                            {version.versionId} · {version.status}
+                                        </option>
+                                    ))}
+                            </select>
+                        </label>
+                        <label className="stew-asset-workspace__console-search-group">
+                            <span className="stew-asset-workspace__console-control-label">搜索资源</span>
+                            <input
+                                value={treeQuery}
+                                onChange={(event) => setTreeQuery(event.target.value)}
+                                placeholder="按文件名或路径过滤目录树"
+                                style={consoleSearchInputStyle}
+                            />
+                        </label>
+                    </>
+                )}
+                actions={(
+                    <>
+                        {renderHeaderExtras ? renderHeaderExtras(actionContext) : null}
+                        {!collection?.hasDraft ? (
+                            <button type="button" style={topbarPrimaryButtonStyle} disabled={actionBusy} onClick={() => void handleCreateDraft()}>
+                                创建草稿
+                            </button>
+                        ) : null}
+                        {collection?.hasDraft ? (
+                            <button type="button" style={topbarButtonStyle} disabled={actionBusy} onClick={() => void handleDiscardDraft()}>
+                                废弃草稿
+                            </button>
+                        ) : null}
+                        {collection?.hasDraft ? (
+                            <button type="button" style={topbarPrimaryButtonStyle} disabled={actionBusy} onClick={() => void handlePublishDraft()}>
+                                发布版本
+                            </button>
+                        ) : null}
+                        <button
+                            type="button"
+                            style={topbarButtonStyle}
+                            disabled={!selectedVersionId || exporting}
+                            onClick={() => void handleExport()}
+                        >
+                            {exporting ? '导出中...' : selectedPath ? '导出当前资源' : '导出当前版本'}
+                        </button>
+                        <button type="button" style={topbarButtonStyle} disabled={loading} onClick={() => void loadWorkspace()}>
+                            刷新
+                        </button>
+                        {renderToolbarEnd ? renderToolbarEnd(actionContext) : null}
+                    </>
+                )}
+                status={status}
+                sidebarTitle="资源目录"
+                sidebarSubtitle={treeQuery.trim() ? `筛选后 ${visibleTreeCount} 项` : `共 ${treeEntries.length} 项`}
+                sidebarActions={(
+                    <>
+                        <span className="stew-asset-workspace__console-sidebar-pill">{isDraftSelected ? '草稿视图' : '版本视图'}</span>
+                        <button
+                            type="button"
+                            style={topbarButtonStyle}
+                            disabled={!selectedVersionId || exporting}
+                            onClick={() => void handleExport('/')}
+                        >
+                            导出
+                        </button>
+                    </>
+                )}
+                sidebarCardTitle={selectedVersion?.versionId || '正在加载版本'}
+                sidebarCardBody={(
+                    <>
+                        <div>{versionDescription}</div>
+                        <div>{versionMeta}</div>
+                    </>
+                )}
+                sidebarContent={(
+                    <AssetTree
+                        title={treeQuery.trim() ? '搜索结果' : '资源目录'}
+                        nodes={filteredTreeNodes}
+                        expandedPaths={visibleExpandedPaths}
+                        selectedPath={selectedPath}
+                        loading={loading}
+                        compact
+                        emptyTitle={treeQuery.trim() ? '未找到匹配资源' : '暂无资源'}
+                        emptyMessage={treeQuery.trim() ? '请调整关键字，或清空搜索后查看完整目录树。' : '当前版本没有可浏览的资源条目。'}
+                        onSelect={(path) => setSelectedPath(path)}
+                        onToggle={(path) => {
+                            setExpandedPaths((current) => {
+                                const next = new Set(current);
+                                if (next.has(path)) {
+                                    next.delete(path);
+                                } else {
+                                    next.add(path);
+                                }
+                                return next;
+                            });
+                        }}
+                        renderNodeMeta={renderTreeNodeMeta}
+                        renderNodeActions={(node) => (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                {!node.isDirectory || node.path ? (
+                                    <button
+                                        type="button"
+                                        className="stew-asset-tree__action-button"
+                                        disabled={exporting || !selectedVersionId}
+                                        onClick={() => void handleExport(node.path)}
+                                    >
+                                        <span className="stew-asset-tree__action-icon" aria-hidden="true">
+                                            <DownloadIcon />
+                                        </span>
+                                        <span>导出</span>
+                                    </button>
+                                ) : null}
+                                {renderTreeNodeActions ? renderTreeNodeActions(node) : null}
+                            </div>
+                        )}
+                    />
+                )}
+                mainTitle={selectedPathLabel}
+                mainSubtitle={entryMeta}
+                viewSwitcher={(
+                    <div className="stew-asset-workspace__console-view-switcher">
+                        <button
+                            type="button"
+                            className={`stew-asset-workspace__console-view-button${consoleView === 'edit' ? ' is-active' : ''}`}
+                            onClick={() => setConsoleWorkspaceView('edit')}
+                        >
+                            编辑
+                        </button>
+                        <button
+                            type="button"
+                            className={`stew-asset-workspace__console-view-button${consoleView === 'preview' ? ' is-active' : ''}`}
+                            disabled={!canPreviewMarkdown}
+                            onClick={() => setConsoleWorkspaceView('preview')}
+                        >
+                            预览
+                        </button>
+                        <button
+                            type="button"
+                            className={`stew-asset-workspace__console-view-button${consoleView === 'diff' ? ' is-active' : ''}`}
+                            disabled={!selectedPath}
+                            onClick={() => setConsoleWorkspaceView('diff')}
+                        >
+                            差异
+                        </button>
+                    </div>
+                )}
+                mainContent={consoleView === 'diff' ? (
+                    <AssetDiffViewer
+                        label={diffLabel}
+                        language={editorLanguage}
+                        summary={diffSummary}
+                        entries={diffEntries}
+                        selectedPath={selectedPath}
+                        originalText={diffLeftText}
+                        modifiedText={diffRightText}
+                        compact
+                        onSelectEntry={(path) => setSelectedPath(path)}
+                        actions={renderDiffActions ? renderDiffActions(actionContext) : null}
+                    />
+                ) : (
+                    <AssetEditor
+                        selectedPath={selectedPath}
+                        selectedEntry={selectedEntry}
+                        modelPath={currentModelPath}
+                        language={editorLanguage}
+                        value={editorText}
+                        canEdit={canEdit}
+                        dirty={dirty}
+                        saving={saving}
+                        entryRevision={entryRevision}
+                        openTabs={openTabs}
+                        compact
+                        mode={activeEditorMode}
+                        showModeSwitch={false}
+                        onChange={(value) => {
+                            const nextDirty = value !== originalText;
+                            setEditorText(value);
+                            setDirty(nextDirty);
+                            if (selectedEntry?.entryKind === 'file') {
+                                setEditorSessions((current) => ({
+                                    ...current,
+                                    [selectedEntry.path]: {
+                                        path: selectedEntry.path,
+                                        versionId: selectedVersionId,
+                                        entry: selectedEntry,
+                                        text: value,
+                                        originalText,
+                                        entryRevision,
+                                        language: editorLanguage,
+                                        dirty: nextDirty,
+                                    },
+                                }));
+                            }
+                        }}
+                        onSave={canEdit ? () => void handleSave() : undefined}
+                        onSelectTab={(path) => setSelectedPath(path)}
+                        onCloseTab={closeEditorTab}
+                        actions={renderEditorActions ? renderEditorActions(actionContext) : null}
+                    />
+                )}
+                compareNote={selectedCompareVersion ? `当前对比基线：${selectedCompareVersion.versionId}` : undefined}
+                footer={renderFooter ? renderFooter(actionContext) : undefined}
+            />
+        );
+    }
 
     return (
         <section
@@ -802,212 +1136,257 @@ export function AssetBrowserWorkspace({
                 ...style,
             }}
         >
-            <div style={cardHeaderStyle}>
-                <div style={{ display: 'grid', gap: 6 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        Stew Asset Workspace
-                    </div>
-                    <div style={{ fontSize: 22, fontWeight: 700 }}>{heading}</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {pill('Space', assetSpace)}
-                        {pill('Asset', assetId)}
-                        {pill('Mode', isDraftSelected ? 'Draft' : 'Read only')}
-                        {collection?.activeVersionId ? pill('Active', collection.activeVersionId) : null}
-                    </div>
-                </div>
-                <div style={{ display: 'grid', gap: 12, justifyItems: 'end' }}>
-                    {renderHeaderExtras ? renderHeaderExtras(actionContext) : null}
-                    {status ? (
-                        <div style={{ ...toneStyle(status.tone), borderRadius: 14, padding: '10px 12px', fontSize: 13, maxWidth: 320 }}>
-                            {status.text}
+            <>
+                <div style={cardHeaderStyle}>
+                    <div style={{ display: 'grid', gap: 6 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            Stew Asset Workspace
                         </div>
-                    ) : null}
+                        <div style={{ fontSize: 22, fontWeight: 700 }}>{heading}</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {pill('Space', assetSpace)}
+                            {pill('Asset', assetId)}
+                            {pill('Mode', isDraftSelected ? 'Draft' : 'Read only')}
+                            {collection?.activeVersionId ? pill('Active', collection.activeVersionId) : null}
+                        </div>
+                    </div>
+                    <div style={{ display: 'grid', gap: 12, justifyItems: 'end' }}>
+                        {renderHeaderExtras ? renderHeaderExtras(actionContext) : null}
+                        {status ? (
+                            <div style={{ ...toneStyle(status.tone), borderRadius: 14, padding: '10px 12px', fontSize: 13, maxWidth: 320 }}>
+                                {status.text}
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
-            </div>
 
-            <div style={toolbarStyle}>
-                {renderToolbarStart ? renderToolbarStart(actionContext) : null}
+                <div style={toolbarStyle}>
+                    {renderToolbarStart ? renderToolbarStart(actionContext) : null}
 
-                <label style={{ display: 'grid', gap: 6, minWidth: 210 }}>
-                    <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Current version</span>
-                    <select value={selectedVersionId} onChange={(event) => setSelectedVersionId(event.target.value)} style={selectStyle}>
-                        {versions.map((version) => (
-                            <option key={version.versionId} value={version.versionId}>
-                                {version.versionId} · {version.status}{version.isActive ? ' · active' : ''}{version.isDraft ? ' · draft' : ''}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-
-                <label style={{ display: 'grid', gap: 6, minWidth: 210 }}>
-                    <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Compare with</span>
-                    <select value={compareVersionId} onChange={(event) => setCompareVersionId(event.target.value)} style={selectStyle}>
-                        <option value="">No comparison</option>
-                        {versions
-                            .filter((version) => version.versionId !== selectedVersionId)
-                            .map((version) => (
+                    <label style={{ display: 'grid', gap: 6, minWidth: 210 }}>
+                        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Current version</span>
+                        <select value={selectedVersionId} onChange={(event) => setSelectedVersionId(event.target.value)} style={selectStyle}>
+                            {versions.map((version) => (
                                 <option key={version.versionId} value={version.versionId}>
-                                    {version.versionId} · {version.status}
+                                    {version.versionId} · {version.status}{version.isActive ? ' · active' : ''}{version.isDraft ? ' · draft' : ''}
                                 </option>
                             ))}
-                    </select>
-                </label>
+                        </select>
+                    </label>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
-                    {!collection?.hasDraft ? (
-                        <button type="button" style={primaryButtonStyle} disabled={actionBusy} onClick={() => void handleCreateDraft()}>
-                            Create draft
+                    <label style={{ display: 'grid', gap: 6, minWidth: 210 }}>
+                        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Compare with</span>
+                        <select value={compareVersionId} onChange={(event) => setCompareVersionId(event.target.value)} style={selectStyle}>
+                            <option value="">No comparison</option>
+                            {versions
+                                .filter((version) => version.versionId !== selectedVersionId)
+                                .map((version) => (
+                                    <option key={version.versionId} value={version.versionId}>
+                                        {version.versionId} · {version.status}
+                                    </option>
+                                ))}
+                        </select>
+                    </label>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
+                        {!collection?.hasDraft ? (
+                            <button type="button" style={primaryButtonStyle} disabled={actionBusy} onClick={() => void handleCreateDraft()}>
+                                Create draft
+                            </button>
+                        ) : null}
+                        {collection?.hasDraft ? (
+                            <button type="button" style={buttonBaseStyle} disabled={actionBusy} onClick={() => void handleDiscardDraft()}>
+                                Discard draft
+                            </button>
+                        ) : null}
+                        {collection?.hasDraft ? (
+                            <button type="button" style={primaryButtonStyle} disabled={actionBusy} onClick={() => void handlePublishDraft()}>
+                                Publish draft
+                            </button>
+                        ) : null}
+                        <button type="button" style={buttonBaseStyle} disabled={!selectedPath} onClick={() => setDiffVisible(!showDiff)}>
+                            {showDiff ? 'Hide diff' : 'Show diff'}
                         </button>
-                    ) : null}
-                    {collection?.hasDraft ? (
-                        <button type="button" style={buttonBaseStyle} disabled={actionBusy} onClick={() => void handleDiscardDraft()}>
-                            Discard draft
+                        <button
+                            type="button"
+                            style={buttonBaseStyle}
+                            disabled={!selectedVersionId || exporting}
+                            onClick={() => void handleExport()}
+                        >
+                            {exporting ? 'Exporting...' : selectedPath ? 'Export selection' : 'Export version'}
                         </button>
-                    ) : null}
-                    {collection?.hasDraft ? (
-                        <button type="button" style={primaryButtonStyle} disabled={actionBusy} onClick={() => void handlePublishDraft()}>
-                            Publish draft
+                        <button type="button" style={buttonBaseStyle} disabled={loading} onClick={() => void loadWorkspace()}>
+                            Refresh
                         </button>
-                    ) : null}
-                    <button type="button" style={buttonBaseStyle} disabled={!selectedPath} onClick={() => setShowDiff((value) => !value)}>
-                        {showDiff ? 'Hide diff' : 'Show diff'}
-                    </button>
-                    <button
-                        type="button"
-                        style={buttonBaseStyle}
-                        disabled={!selectedVersionId || exporting}
-                        onClick={() => void handleExport()}
-                    >
-                        {exporting ? 'Exporting...' : selectedPath ? 'Export selection' : 'Export version'}
-                    </button>
-                    <button type="button" style={buttonBaseStyle} disabled={loading} onClick={() => void loadWorkspace()}>
-                        Refresh
-                    </button>
+                    </div>
+
+                    {renderToolbarEnd ? renderToolbarEnd(actionContext) : null}
                 </div>
 
-                {renderToolbarEnd ? renderToolbarEnd(actionContext) : null}
-            </div>
-
-            <div style={{ flex: 1, minHeight: 0 }}>
-                <Group orientation="horizontal">
-                    <Panel defaultSize={24} minSize={18}>
-                        <div style={{ ...sectionStyle, background: 'rgba(255,255,255,0.72)' }}>
-                            <AssetTree
-                                nodes={treeNodes}
-                                expandedPaths={expandedPaths}
-                                selectedPath={selectedPath}
-                                loading={loading}
-                                onSelect={(path) => setSelectedPath(path)}
-                                onToggle={(path) => {
-                                    setExpandedPaths((current) => {
-                                        const next = new Set(current);
-                                        if (next.has(path)) {
-                                            next.delete(path);
-                                        } else {
-                                            next.add(path);
+                <div style={{ flex: 1, minHeight: 0 }}>
+                    <Group orientation="horizontal">
+                        <Panel defaultSize={24} minSize={18}>
+                            <div style={{ ...sectionStyle, background: 'rgba(255,255,255,0.72)' }}>
+                                <AssetTree
+                                    nodes={treeNodes}
+                                    expandedPaths={expandedPaths}
+                                    selectedPath={selectedPath}
+                                    loading={loading}
+                                    onSelect={(path) => setSelectedPath(path)}
+                                    onToggle={(path) => {
+                                        setExpandedPaths((current) => {
+                                            const next = new Set(current);
+                                            if (next.has(path)) {
+                                                next.delete(path);
+                                            } else {
+                                                next.add(path);
+                                            }
+                                            return next;
+                                        });
+                                    }}
+                                    renderNodeMeta={renderTreeNodeMeta}
+                                    renderNodeActions={(node) => (
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                            {!node.isDirectory || node.path ? (
+                                                <button
+                                                    type="button"
+                                                    className="stew-asset-tree__action-button"
+                                                    disabled={exporting || !selectedVersionId}
+                                                    onClick={() => void handleExport(node.path)}
+                                                >
+                                                    <span className="stew-asset-tree__action-icon" aria-hidden="true">
+                                                        <DownloadIcon />
+                                                    </span>
+                                                    <span>Export</span>
+                                                </button>
+                                            ) : null}
+                                            {renderTreeNodeActions ? renderTreeNodeActions(node) : null}
+                                        </div>
+                                    )}
+                                />
+                            </div>
+                        </Panel>
+                        <Separator style={panelHandleStyle} />
+                        <Panel defaultSize={showDiff ? 44 : 76} minSize={32}>
+                            <div style={sectionStyle}>
+                                <AssetEditor
+                                    selectedPath={selectedPath}
+                                    selectedEntry={selectedEntry}
+                                    modelPath={currentModelPath}
+                                    language={editorLanguage}
+                                    value={editorText}
+                                    canEdit={canEdit}
+                                    dirty={dirty}
+                                    saving={saving}
+                                    entryRevision={entryRevision}
+                                    openTabs={openTabs}
+                                    onChange={(value) => {
+                                        const nextDirty = value !== originalText;
+                                        setEditorText(value);
+                                        setDirty(nextDirty);
+                                        if (selectedEntry?.entryKind === 'file') {
+                                            setEditorSessions((current) => ({
+                                                ...current,
+                                                [selectedEntry.path]: {
+                                                    path: selectedEntry.path,
+                                                    versionId: selectedVersionId,
+                                                    entry: selectedEntry,
+                                                    text: value,
+                                                    originalText,
+                                                    entryRevision,
+                                                    language: editorLanguage,
+                                                    dirty: nextDirty,
+                                                },
+                                            }));
                                         }
-                                        return next;
-                                    });
-                                }}
-                                renderNodeMeta={renderTreeNodeMeta}
-                                renderNodeActions={(node) => (
-                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                        {!node.isDirectory || node.path ? (
-                                            <button
-                                                type="button"
-                                                className="stew-asset-tree__action-button"
-                                                disabled={exporting || !selectedVersionId}
-                                                onClick={() => void handleExport(node.path)}
-                                            >
-                                                <span className="stew-asset-tree__action-icon" aria-hidden="true">
-                                                    <DownloadIcon />
-                                                </span>
-                                                <span>Export</span>
-                                            </button>
-                                        ) : null}
-                                        {renderTreeNodeActions ? renderTreeNodeActions(node) : null}
+                                    }}
+                                    onSave={canEdit ? () => void handleSave() : undefined}
+                                    onSelectTab={(path) => setSelectedPath(path)}
+                                    onCloseTab={closeEditorTab}
+                                    actions={renderEditorActions ? renderEditorActions(actionContext) : null}
+                                />
+                            </div>
+                        </Panel>
+                        {showDiff ? (
+                            <>
+                                <Separator style={panelHandleStyle} />
+                                <Panel defaultSize={32} minSize={20}>
+                                    <div style={{ ...sectionStyle, background: '#f8fafc' }}>
+                                        <AssetDiffViewer
+                                            label={diffLabel}
+                                            language={editorLanguage}
+                                            summary={diffSummary}
+                                            entries={diffEntries}
+                                            selectedPath={selectedPath}
+                                            originalText={diffLeftText}
+                                            modifiedText={diffRightText}
+                                            onSelectEntry={(path) => setSelectedPath(path)}
+                                            actions={renderDiffActions ? renderDiffActions(actionContext) : null}
+                                        />
                                     </div>
-                                )}
-                            />
-                        </div>
-                    </Panel>
-                    <Separator style={panelHandleStyle} />
-                    <Panel defaultSize={showDiff ? 44 : 76} minSize={32}>
-                        <div style={sectionStyle}>
-                            <AssetEditor
-                                selectedPath={selectedPath}
-                                selectedEntry={selectedEntry}
-                                modelPath={currentModelPath}
-                                language={editorLanguage}
-                                value={editorText}
-                                canEdit={canEdit}
-                                dirty={dirty}
-                                saving={saving}
-                                entryRevision={entryRevision}
-                                openTabs={openTabs}
-                                onChange={(value) => {
-                                    const nextDirty = value !== originalText;
-                                    setEditorText(value);
-                                    setDirty(nextDirty);
-                                    if (selectedEntry?.entryKind === 'file') {
-                                        setEditorSessions((current) => ({
-                                            ...current,
-                                            [selectedEntry.path]: {
-                                                path: selectedEntry.path,
-                                                versionId: selectedVersionId,
-                                                entry: selectedEntry,
-                                                text: value,
-                                                originalText,
-                                                entryRevision,
-                                                language: editorLanguage,
-                                                dirty: nextDirty,
-                                            },
-                                        }));
-                                    }
-                                }}
-                                onSave={canEdit ? () => void handleSave() : undefined}
-                                onSelectTab={(path) => setSelectedPath(path)}
-                                onCloseTab={closeEditorTab}
-                                actions={renderEditorActions ? renderEditorActions(actionContext) : null}
-                            />
-                        </div>
-                    </Panel>
-                    {showDiff ? (
-                        <>
-                            <Separator style={panelHandleStyle} />
-                            <Panel defaultSize={32} minSize={20}>
-                                <div style={{ ...sectionStyle, background: '#f8fafc' }}>
-                                    <AssetDiffViewer
-                                        label={diffLabel}
-                                        language={editorLanguage}
-                                        summary={diffSummary}
-                                        entries={diffEntries}
-                                        selectedPath={selectedPath}
-                                        originalText={diffLeftText}
-                                        modifiedText={diffRightText}
-                                        onSelectEntry={(path) => setSelectedPath(path)}
-                                        actions={renderDiffActions ? renderDiffActions(actionContext) : null}
-                                    />
-                                </div>
-                            </Panel>
-                        </>
-                    ) : null}
-                </Group>
-            </div>
-
-            {selectedCompareVersion ? (
-                <div style={{ padding: '10px 18px', borderTop: '1px solid rgba(148,163,184,0.14)', fontSize: 12, color: '#64748b' }}>
-                    Comparing against {selectedCompareVersion.versionId} when diff mode is enabled.
+                                </Panel>
+                            </>
+                        ) : null}
+                    </Group>
                 </div>
-            ) : null}
 
-            {renderFooter ? (
-                <div style={{ padding: '12px 18px', borderTop: '1px solid rgba(148,163,184,0.10)', background: 'rgba(248,250,252,0.92)' }}>
-                    {renderFooter(actionContext)}
-                </div>
-            ) : null}
+                {selectedCompareVersion ? (
+                    <div style={{ padding: '10px 18px', borderTop: '1px solid rgba(148,163,184,0.14)', fontSize: 12, color: '#64748b' }}>
+                        Comparing against {selectedCompareVersion.versionId} when diff mode is enabled.
+                    </div>
+                ) : null}
+
+                {renderFooter ? (
+                    <div style={{ padding: '12px 18px', borderTop: '1px solid rgba(148,163,184,0.10)', background: 'rgba(248,250,252,0.92)' }}>
+                        {renderFooter(actionContext)}
+                    </div>
+                ) : null}
+            </>
         </section>
     );
+}
+
+function filterTreeNodes(nodes: TreeNode[], query: string): TreeNode[] {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+        return nodes;
+    }
+
+    return nodes
+        .map((node) => {
+            const filteredChildren = filterTreeNodes(node.children, normalizedQuery);
+            const matched = node.name.toLowerCase().includes(normalizedQuery) || node.path.toLowerCase().includes(normalizedQuery);
+
+            if (!matched && filteredChildren.length === 0) {
+                return null;
+            }
+
+            return {
+                ...node,
+                children: filteredChildren,
+            } satisfies TreeNode;
+        })
+        .filter((node): node is TreeNode => node !== null);
+}
+
+function countTreeNodes(nodes: TreeNode[]): number {
+    return nodes.reduce((total, node) => total + 1 + countTreeNodes(node.children), 0);
+}
+
+function formatWorkspaceTimestamp(value: string): string {
+    if (!value) {
+        return '--';
+    }
+
+    const timestamp = new Date(value);
+    if (Number.isNaN(timestamp.getTime())) {
+        return value;
+    }
+
+    return new Intl.DateTimeFormat('zh-CN', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(timestamp);
 }
 
 function DownloadIcon() {
