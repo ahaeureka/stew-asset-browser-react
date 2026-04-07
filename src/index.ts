@@ -9,6 +9,7 @@ export {
 export {
     AssetEditor,
     type AssetEditorProps,
+    type AssetEditorTab,
 } from './asset-editor.js';
 export {
     AssetDiffViewer,

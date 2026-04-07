@@ -20,6 +20,24 @@ Stew 业务资产浏览 React UI SDK。
 
 浏览器端请直接使用 `asset_browser_client` 入口，避免把 Node 侧辅助模块打进前端包。
 
+当前这套 UI SDK 文档按已经落地的后端资产接口编写，不按 proto 里的预留字段做超前描述。
+
+## 本地效果预览
+
+这个包现在自带一个纯前端 mock 数据预览页，用来调目录树、编辑区和按钮视觉，不依赖后端接口。
+
+```bash
+cd /app/stew-asset-browser-react
+pnpm preview
+```
+
+默认会启动一个本地 Vite 页面；如果只想校验静态构建，可执行：
+
+```bash
+cd /app/stew-asset-browser-react
+pnpm preview:build
+```
+
 ## 快速开始
 
 ```tsx
@@ -82,6 +100,27 @@ const client = new AssetBrowserClient({
 
 - 浏览器端请从 `protobuf-typescript-client-gen/dist/asset_browser_client` 导入。
 - 客户端默认携带 cookie，并会复用当前登录态。
+- 如需先创建或兜底资产集合，可先调用 `client.ensureCollection()`，再挂载工作台。
+
+## 与后端接口对齐说明
+
+`AssetBrowserWorkspace` 当前直接建立在 `BusinessAssetBrowserService` 已实现的这批接口之上：
+
+- 目录树：`ListAssetTree`
+- 版本列表：`ListAssetVersions`
+- 草稿创建/废弃/发布：`CreateDraftVersion`、`DiscardDraftVersion`、`PublishDraftVersion`
+- 文本读取与草稿保存：`GetAssetEntryText`、`UpdateDraftTextEntry`
+- 差异查看：`DiffAssetDraft`、`DiffAssetVersions`、`GetAssetDiffEntryDetail`
+- 版本切换：`ActivateAssetVersion`
+- 导出：`ExportAssetEntry`
+
+当前已确认的行为边界：
+
+- `initialFolder="/"` 时，后端返回整版资产的递归平铺条目，工作台在前端重建目录树
+- 非根目录仍保持 direct children 语义
+- `getVersion()` 现在会返回 `baseVersion`；当目标版本为 draft 时，还会返回 `draftDiffSummary`
+- `diffDraft()` / `diffVersions()` 现在已实际支持 `diffMode`、`pathPrefix`
+- 当 `diffMode="with_text"` 时，文本类差异会带上 `oldPreview`、`newPreview`、`unifiedDiff`、`textDiffStatus`
 
 ## 资产导出
 

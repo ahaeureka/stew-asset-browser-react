@@ -26,7 +26,7 @@ import {
     AssetBrowserClient,
 } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 import { AssetDiffViewer } from './asset-diff-viewer';
-import { AssetEditor } from './asset-editor';
+import { AssetEditor, type AssetEditorTab } from './asset-editor';
 import {
     buildTree,
     buttonBaseStyle,
@@ -72,6 +72,17 @@ interface ActionContextOverrides {
     loading?: boolean;
     showDiff?: boolean;
     status?: StatusMessage | null;
+}
+
+interface EditorSession {
+    path: string;
+    versionId: string;
+    entry: AssetTreeEntry;
+    text: string;
+    originalText: string;
+    entryRevision: number;
+    language: string;
+    dirty: boolean;
 }
 
 export interface AssetBrowserWorkspaceProps {
@@ -138,6 +149,8 @@ export function AssetBrowserWorkspace({
     const [originalText, setOriginalText] = useState('');
     const [entryRevision, setEntryRevision] = useState(0);
     const [editorLanguage, setEditorLanguage] = useState('plaintext');
+    const [editorSessions, setEditorSessions] = useState<Record<string, EditorSession>>({});
+    const [openEditorPaths, setOpenEditorPaths] = useState<string[]>([]);
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
     const [status, setStatus] = useState<StatusMessage | null>(null);
@@ -150,6 +163,11 @@ export function AssetBrowserWorkspace({
     const [actionBusy, setActionBusy] = useState(false);
     const [exporting, setExporting] = useState(false);
     const mountedRef = useRef(true);
+    const editorSessionsRef = useRef<Record<string, EditorSession>>({});
+
+    useEffect(() => {
+        editorSessionsRef.current = editorSessions;
+    }, [editorSessions]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -207,6 +225,8 @@ export function AssetBrowserWorkspace({
         if (!selectedVersionId) {
             return;
         }
+        setEditorSessions({});
+        setOpenEditorPaths([]);
         void loadTree(selectedVersionId, true);
     }, [selectedVersionId]);
 
@@ -220,6 +240,18 @@ export function AssetBrowserWorkspace({
             setEntryRevision(0);
             setEditorLanguage('plaintext');
             setDirty(false);
+            return;
+        }
+
+        setOpenEditorPaths((current) => current.includes(entry.path) ? current : [...current, entry.path]);
+
+        const cachedSession = editorSessionsRef.current[entry.path];
+        if (cachedSession && cachedSession.versionId === selectedVersionId) {
+            setOriginalText(cachedSession.originalText);
+            setEditorText(cachedSession.text);
+            setEntryRevision(cachedSession.entryRevision);
+            setEditorLanguage(cachedSession.language);
+            setDirty(cachedSession.dirty);
             return;
         }
 
@@ -376,11 +408,26 @@ export function AssetBrowserWorkspace({
             if (!mountedRef.current) {
                 return;
             }
+            const language = languageFor(entry, result.languageHint);
+            const session: EditorSession = {
+                path: entry.path,
+                versionId,
+                entry,
+                text: result.text,
+                originalText: result.text,
+                entryRevision: result.entryRevision,
+                language,
+                dirty: false,
+            };
+            setEditorSessions((current) => ({
+                ...current,
+                [entry.path]: session,
+            }));
             startTransition(() => {
                 setOriginalText(result.text);
                 setEditorText(result.text);
                 setEntryRevision(result.entryRevision);
-                setEditorLanguage(languageFor(entry, result.languageHint));
+                setEditorLanguage(language);
                 setDirty(false);
                 setStatus(result.truncated
                     ? { tone: 'warning', text: 'Preview truncated for large file' }
@@ -395,27 +442,52 @@ export function AssetBrowserWorkspace({
         try {
             const currentVersion = versions.find((item) => item.versionId === selectedVersionId);
             const draftVersionId = collection?.draftVersionId || versions.find((item) => item.isDraft)?.versionId || '';
+            const diffPathPrefix = selectedEntry?.entryKind === 'directory'
+                ? selectedEntry.path
+                : selectedEntry?.parentPath && selectedEntry.parentPath !== '/'
+                    ? selectedEntry.parentPath
+                    : selectedPath || undefined;
 
             if (currentVersion?.isDraft && draftVersionId) {
-                const diff = await client.diffDraft(assetSpace, assetId, draftVersionId, { pageSize: 1000 });
+                const diff = await client.diffDraft(assetSpace, assetId, draftVersionId, {
+                    diffMode: 'with_text',
+                    pathPrefix: diffPathPrefix,
+                    pageSize: 1000,
+                });
                 if (!mountedRef.current) {
                     return;
                 }
                 setDiffSummary(diff.summary);
                 setDiffEntries(diff.entries);
-                const targetEntry = diff.entries.find((item) => item.path === selectedPath && item.diffDetailAvailable);
+                const targetEntry = diff.entries.find((item) => item.path === selectedPath);
                 if (!targetEntry || !diff.baseVersion || !diff.draftVersion) {
                     setDiffLeftText(originalText);
                     setDiffRightText(editorText);
                     setDiffLabel('Selected file has no text diff detail');
                     return;
                 }
+
+                if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
+                    setDiffLeftText(targetEntry.oldPreview);
+                    setDiffRightText(targetEntry.newPreview);
+                    setDiffLabel(`${diff.baseVersion.versionId} -> ${diff.draftVersion.versionId}`);
+                    return;
+                }
+
+                if (!targetEntry.diffDetailAvailable) {
+                    setDiffLeftText('');
+                    setDiffRightText('');
+                    setDiffLabel('Selected file has no text diff detail');
+                    return;
+                }
+
                 const detail = await client.getDiffEntryDetail(
                     assetSpace,
                     assetId,
                     diff.baseVersion.versionId,
                     diff.draftVersion.versionId,
                     selectedPath,
+                    { diffMode: 'with_text' },
                 );
                 if (!mountedRef.current) {
                     return;
@@ -435,25 +507,45 @@ export function AssetBrowserWorkspace({
                 return;
             }
 
-            const diff = await client.diffVersions(assetSpace, assetId, compareVersionId, selectedVersionId, { pageSize: 1000 });
+            const diff = await client.diffVersions(assetSpace, assetId, compareVersionId, selectedVersionId, {
+                diffMode: 'with_text',
+                pathPrefix: diffPathPrefix,
+                pageSize: 1000,
+            });
             if (!mountedRef.current) {
                 return;
             }
             setDiffSummary(diff.summary);
             setDiffEntries(diff.entries);
-            const targetEntry = diff.entries.find((item) => item.path === selectedPath && item.diffDetailAvailable);
+            const targetEntry = diff.entries.find((item) => item.path === selectedPath);
             if (!targetEntry || !diff.leftVersion || !diff.rightVersion) {
                 setDiffLeftText('');
                 setDiffRightText('');
                 setDiffLabel('Selected file has no text diff detail');
                 return;
             }
+
+            if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
+                setDiffLeftText(targetEntry.oldPreview);
+                setDiffRightText(targetEntry.newPreview);
+                setDiffLabel(`${diff.leftVersion.versionId} -> ${diff.rightVersion.versionId}`);
+                return;
+            }
+
+            if (!targetEntry.diffDetailAvailable) {
+                setDiffLeftText('');
+                setDiffRightText('');
+                setDiffLabel('Selected file has no text diff detail');
+                return;
+            }
+
             const detail = await client.getDiffEntryDetail(
                 assetSpace,
                 assetId,
                 diff.leftVersion.versionId,
                 diff.rightVersion.versionId,
                 selectedPath,
+                { diffMode: 'with_text' },
             );
             if (!mountedRef.current) {
                 return;
@@ -573,6 +665,25 @@ export function AssetBrowserWorkspace({
             setOriginalText(editorText);
             setEntryRevision(result.entryRevision);
             setDirty(false);
+            setEditorSessions((current) => {
+                const existing = selectedEntry ? current[selectedEntry.path] : undefined;
+                if (!selectedEntry) {
+                    return current;
+                }
+                return {
+                    ...current,
+                    [selectedEntry.path]: {
+                        path: selectedEntry.path,
+                        versionId: draftVersionId,
+                        entry: selectedEntry,
+                        text: editorText,
+                        originalText: editorText,
+                        entryRevision: result.entryRevision,
+                        language: existing?.language || editorLanguage,
+                        dirty: false,
+                    },
+                };
+            });
             setStatus({ tone: 'success', text: `Saved revision ${result.entryRevision}` });
             await loadTree(draftVersionId, false);
             if (showDiff) {
@@ -636,6 +747,41 @@ export function AssetBrowserWorkspace({
             }
         }
     }
+
+    function labelForPath(path: string): string {
+        const segments = path.split('/').filter(Boolean);
+        return segments[segments.length - 1] || path || 'Untitled';
+    }
+
+    function closeEditorTab(path: string) {
+        setOpenEditorPaths((current) => {
+            const next = current.filter((item) => item !== path);
+            if (selectedPath === path) {
+                setSelectedPath(next[next.length - 1] || '');
+            }
+            return next;
+        });
+    }
+
+    const openTabs: AssetEditorTab[] = openEditorPaths
+        .map((path) => {
+            const session = editorSessions[path];
+            const entry = session?.entry ?? treeEntries.find((item) => item.path === path) ?? null;
+            if (!entry || entry.entryKind !== 'file' || !entry.isTextPreviewable) {
+                return null;
+            }
+            return {
+                path,
+                label: labelForPath(path),
+                active: path === selectedPath,
+                dirty: session?.dirty ?? (path === selectedPath && dirty),
+            } satisfies AssetEditorTab;
+        })
+        .filter((item): item is AssetEditorTab => item !== null);
+
+    const currentModelPath = selectedPath && selectedVersionId
+        ? `file:///stew/${encodeURIComponent(assetSpace)}/${encodeURIComponent(assetId)}/${encodeURIComponent(selectedVersionId)}${selectedPath}`
+        : undefined;
 
     const selectedVersion = versions.find((item) => item.versionId === selectedVersionId) ?? null;
     const selectedCompareVersion = versions.find((item) => item.versionId === compareVersionId) ?? null;
@@ -769,16 +915,14 @@ export function AssetBrowserWorkspace({
                                         {!node.isDirectory || node.path ? (
                                             <button
                                                 type="button"
-                                                style={{
-                                                    ...buttonBaseStyle,
-                                                    padding: '4px 8px',
-                                                    fontSize: 11,
-                                                    lineHeight: 1.2,
-                                                }}
+                                                className="stew-asset-tree__action-button"
                                                 disabled={exporting || !selectedVersionId}
                                                 onClick={() => void handleExport(node.path)}
                                             >
-                                                Export
+                                                <span className="stew-asset-tree__action-icon" aria-hidden="true">
+                                                    <DownloadIcon />
+                                                </span>
+                                                <span>Export</span>
                                             </button>
                                         ) : null}
                                         {renderTreeNodeActions ? renderTreeNodeActions(node) : null}
@@ -793,17 +937,37 @@ export function AssetBrowserWorkspace({
                             <AssetEditor
                                 selectedPath={selectedPath}
                                 selectedEntry={selectedEntry}
+                                modelPath={currentModelPath}
                                 language={editorLanguage}
                                 value={editorText}
                                 canEdit={canEdit}
                                 dirty={dirty}
                                 saving={saving}
                                 entryRevision={entryRevision}
+                                openTabs={openTabs}
                                 onChange={(value) => {
+                                    const nextDirty = value !== originalText;
                                     setEditorText(value);
-                                    setDirty(value !== originalText);
+                                    setDirty(nextDirty);
+                                    if (selectedEntry?.entryKind === 'file') {
+                                        setEditorSessions((current) => ({
+                                            ...current,
+                                            [selectedEntry.path]: {
+                                                path: selectedEntry.path,
+                                                versionId: selectedVersionId,
+                                                entry: selectedEntry,
+                                                text: value,
+                                                originalText,
+                                                entryRevision,
+                                                language: editorLanguage,
+                                                dirty: nextDirty,
+                                            },
+                                        }));
+                                    }
                                 }}
                                 onSave={canEdit ? () => void handleSave() : undefined}
+                                onSelectTab={(path) => setSelectedPath(path)}
+                                onCloseTab={closeEditorTab}
                                 actions={renderEditorActions ? renderEditorActions(actionContext) : null}
                             />
                         </div>
@@ -843,5 +1007,15 @@ export function AssetBrowserWorkspace({
                 </div>
             ) : null}
         </section>
+    );
+}
+
+function DownloadIcon() {
+    return (
+        <svg viewBox="0 0 12 12" fill="none">
+            <path d="M6 1.75V7.25" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            <path d="M3.75 5.5L6 7.75L8.25 5.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M2 9.25H10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
     );
 }

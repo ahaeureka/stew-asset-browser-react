@@ -10,5 +10,6 @@ export interface AssetDiffViewerProps {
     modifiedText: string;
     onSelectEntry?: (path: string) => void;
     actions?: ReactNode;
+    compact?: boolean;
 }
-export declare function AssetDiffViewer({ label, language, summary, entries, selectedPath, originalText, modifiedText, onSelectEntry, actions, }: AssetDiffViewerProps): React.JSX.Element;
+export declare function AssetDiffViewer({ label, language, summary, entries, selectedPath, originalText, modifiedText, onSelectEntry, actions, compact, }: AssetDiffViewerProps): React.JSX.Element;

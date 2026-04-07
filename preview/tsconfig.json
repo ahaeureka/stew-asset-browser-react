@@ -1,0 +1,21 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "rootDir": "..",
+        "noEmit": true,
+        "types": [
+            "react",
+            "react-dom"
+        ]
+    },
+    "include": [
+        "./**/*",
+        "../src/**/*.d.ts",
+        "../src/**/*.tsx"
+    ],
+    "exclude": [
+        "../dist",
+        "../node_modules",
+        "./dist"
+    ]
+}

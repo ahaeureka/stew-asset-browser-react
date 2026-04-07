@@ -1,8 +1,10 @@
 "use client";
 
-import React, { type ReactNode, useState, useEffect } from 'react';
-import { Editor } from '@monaco-editor/react';
+import React, { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { Editor, type Monaco, type OnMount } from '@monaco-editor/react';
 import Markdown, { type Components, type ExtraProps } from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import type { AssetTreeEntry } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 import {
@@ -14,6 +16,21 @@ import {
 } from './asset-browser-shared';
 
 type EditorMode = 'edit' | 'preview';
+
+export type AssetEditorMode = EditorMode;
+
+export interface AssetEditorTab {
+    path: string;
+    label: string;
+    active: boolean;
+    dirty: boolean;
+}
+
+interface MarkdownOutlineItem {
+    depth: number;
+    text: string;
+    id: string;
+}
 
 const tabStyle = (active: boolean): React.CSSProperties => ({
     appearance: 'none',
@@ -27,15 +44,102 @@ const tabStyle = (active: boolean): React.CSSProperties => ({
     color: active ? '#0284c7' : '#64748b',
 });
 
+const secondaryActionStyle = (active = false): React.CSSProperties => ({
+    appearance: 'none',
+    borderRadius: 999,
+    border: '1px solid rgba(148,163,184,0.22)',
+    background: active ? 'rgba(14,165,233,0.10)' : '#ffffff',
+    color: active ? '#0284c7' : '#334155',
+    padding: '6px 10px',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
+});
+
+const tabChipStyle = (active: boolean): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    maxWidth: 260,
+    padding: '7px 10px 7px 12px',
+    borderRadius: 12,
+    border: active ? '1px solid rgba(14,165,233,0.28)' : '1px solid rgba(148,163,184,0.16)',
+    background: active ? 'rgba(14,165,233,0.10)' : 'rgba(255,255,255,0.78)',
+    color: active ? '#0369a1' : '#334155',
+});
+
 const previewContainerStyle: React.CSSProperties = {
     flex: 1,
     minHeight: 0,
     overflow: 'auto',
-    padding: '24px 32px',
+    padding: '28px 32px 40px',
     fontSize: 14,
-    lineHeight: 1.7,
+    lineHeight: 1.8,
     color: '#1e293b',
-    background: '#ffffff',
+    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+};
+
+const previewDocumentStyle: React.CSSProperties = {
+    maxWidth: 860,
+    margin: '0 auto',
+    padding: '32px 36px 44px',
+    borderRadius: 24,
+    border: '1px solid rgba(148,163,184,0.16)',
+    background: 'rgba(255,255,255,0.96)',
+    boxShadow: '0 24px 70px rgba(15,23,42,0.08)',
+};
+
+const previewLeadStyle: React.CSSProperties = {
+    margin: '0 0 24px 0',
+    color: '#64748b',
+    fontSize: 13,
+};
+
+const previewNavStyle: React.CSSProperties = {
+    maxWidth: 860,
+    margin: '0 auto 18px',
+    padding: '18px 20px',
+    borderRadius: 20,
+    border: '1px solid rgba(148,163,184,0.14)',
+    background: 'rgba(248,250,252,0.92)',
+    boxShadow: '0 18px 50px rgba(15,23,42,0.05)',
+};
+
+const previewNavItemStyle = (depth: number): React.CSSProperties => ({
+    appearance: 'none',
+    border: 0,
+    background: 'transparent',
+    color: '#475569',
+    cursor: 'pointer',
+    fontSize: 13,
+    lineHeight: 1.5,
+    textAlign: 'left',
+    padding: '4px 0',
+    paddingLeft: Math.max(0, depth - 1) * 14,
+});
+
+const copyButtonStyle: React.CSSProperties = {
+    appearance: 'none',
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    border: '1px solid rgba(148,163,184,0.18)',
+    borderRadius: 999,
+    background: 'rgba(255,255,255,0.92)',
+    color: '#334155',
+    padding: '6px 10px',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
+    zIndex: 1,
+};
+
+const headingAnchorStyle: React.CSSProperties = {
+    marginLeft: 10,
+    color: '#94a3b8',
+    textDecoration: 'none',
+    fontSize: '0.8em',
+    fontWeight: 600,
 };
 
 type MarkdownTagProps<Tag extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[Tag] & ExtraProps;
@@ -44,104 +148,475 @@ function mergeStyle(base: React.CSSProperties, extra?: React.CSSProperties): Rea
     return extra ? { ...base, ...extra } : base;
 }
 
-const markdownComponents: Components = {
-    h1: ({ children, node, style, ...props }: MarkdownTagProps<'h1'>) => (
-        <h1 {...props} style={mergeStyle({ fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }, style)}>{children}</h1>
-    ),
-    h2: ({ children, node, style, ...props }: MarkdownTagProps<'h2'>) => (
-        <h2 {...props} style={mergeStyle({ fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }, style)}>{children}</h2>
-    ),
-    h3: ({ children, node, style, ...props }: MarkdownTagProps<'h3'>) => (
-        <h3 {...props} style={mergeStyle({ fontSize: 18, fontWeight: 600, margin: '20px 0 8px 0' }, style)}>{children}</h3>
-    ),
-    h4: ({ children, node, style, ...props }: MarkdownTagProps<'h4'>) => (
-        <h4 {...props} style={mergeStyle({ fontSize: 16, fontWeight: 600, margin: '16px 0 8px 0' }, style)}>{children}</h4>
-    ),
-    p: ({ children, node, style, ...props }: MarkdownTagProps<'p'>) => (
-        <p {...props} style={mergeStyle({ margin: '0 0 12px 0' }, style)}>{children}</p>
-    ),
-    ul: ({ children, node, style, ...props }: MarkdownTagProps<'ul'>) => (
-        <ul {...props} style={mergeStyle({ margin: '0 0 12px 0', paddingLeft: 24 }, style)}>{children}</ul>
-    ),
-    ol: ({ children, node, style, ...props }: MarkdownTagProps<'ol'>) => (
-        <ol {...props} style={mergeStyle({ margin: '0 0 12px 0', paddingLeft: 24 }, style)}>{children}</ol>
-    ),
-    li: ({ children, node, style, ...props }: MarkdownTagProps<'li'>) => (
-        <li {...props} style={mergeStyle({ marginBottom: 4 }, style)}>{children}</li>
-    ),
-    blockquote: ({ children, node, style, ...props }: MarkdownTagProps<'blockquote'>) => (
-        <blockquote {...props} style={mergeStyle({ margin: '0 0 12px 0', padding: '8px 16px', borderLeft: '4px solid #cbd5e1', background: '#f8fafc', color: '#475569' }, style)}>{children}</blockquote>
-    ),
-    code: ({ children, node, className, style, ...props }: MarkdownTagProps<'code'>) => {
-        const isBlock = Boolean(className);
-        return isBlock ? (
-            <code {...props} className={className} style={mergeStyle({ display: 'block', padding: 16, borderRadius: 8, background: '#f1f5f9', fontFamily: monoFont, fontSize: 13, overflow: 'auto' }, style)}>{children}</code>
-        ) : (
-            <code {...props} className={className} style={mergeStyle({ padding: '2px 6px', borderRadius: 4, background: '#f1f5f9', fontFamily: monoFont, fontSize: 13 }, style)}>{children}</code>
-        );
-    },
-    pre: ({ children, node, style, ...props }: MarkdownTagProps<'pre'>) => (
-        <pre {...props} style={mergeStyle({ margin: '0 0 12px 0', padding: 0, background: 'transparent', overflow: 'auto' }, style)}>{children}</pre>
-    ),
-    a: ({ children, node, href, style, ...props }: MarkdownTagProps<'a'>) => (
-        <a {...props} href={href} target="_blank" rel="noopener noreferrer" style={mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style)}>{children}</a>
-    ),
-    table: ({ children, node, style, ...props }: MarkdownTagProps<'table'>) => (
-        <div style={{ margin: '0 0 12px 0', overflow: 'auto' }}>
-            <table {...props} style={mergeStyle({ borderCollapse: 'collapse', width: '100%' }, style)}>{children}</table>
+function extractPlainText(node: ReactNode): string {
+    if (typeof node === 'string' || typeof node === 'number') {
+        return String(node);
+    }
+    if (!node || typeof node === 'boolean') {
+        return '';
+    }
+    if (Array.isArray(node)) {
+        return node.map(extractPlainText).join('');
+    }
+    if (React.isValidElement(node)) {
+        const element = node as React.ReactElement<{ children?: ReactNode }>;
+        return extractPlainText(element.props.children ?? null);
+    }
+    return '';
+}
+
+function normalizeMarkdownText(text: string): string {
+    return text
+        .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/[*_~]/g, '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/\\([\\`*_{}\[\]()#+\-.!])/g, '$1')
+        .trim();
+}
+
+function slugifyHeading(text: string): string {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9\u4e00-\u9fa5\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+}
+
+function createHeadingIdFactory(prefix: string) {
+    const counts = new Map<string, number>();
+
+    return (text: string) => {
+        const normalized = slugifyHeading(normalizeMarkdownText(text)) || 'section';
+        const nextCount = (counts.get(normalized) ?? 0) + 1;
+        counts.set(normalized, nextCount);
+        const suffix = nextCount > 1 ? `-${nextCount}` : '';
+        return `${prefix}-${normalized}${suffix}`;
+    };
+}
+
+async function copyText(text: string) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+}
+
+function MarkdownCodeBlockFrame({ children, copySource }: { children: ReactNode; copySource: string }) {
+    const [copied, setCopied] = useState(false);
+
+    async function handleCopy() {
+        await copyText(copySource);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1400);
+    }
+
+    return (
+        <div style={{ position: 'relative', margin: '0 0 20px 0' }}>
+            {copySource ? (
+                <button type="button" style={copyButtonStyle} onClick={() => void handleCopy()}>
+                    {copied ? '已复制' : '复制'}
+                </button>
+            ) : null}
+            {children}
         </div>
-    ),
-    th: ({ children, node, style, ...props }: MarkdownTagProps<'th'>) => (
-        <th {...props} style={mergeStyle({ border: '1px solid #e2e8f0', padding: '8px 12px', background: '#f8fafc', fontWeight: 600, textAlign: 'left' }, style)}>{children}</th>
-    ),
-    td: ({ children, node, style, ...props }: MarkdownTagProps<'td'>) => (
-        <td {...props} style={mergeStyle({ border: '1px solid #e2e8f0', padding: '8px 12px' }, style)}>{children}</td>
-    ),
-    hr: ({ node, style, ...props }: MarkdownTagProps<'hr'>) => (
-        <hr {...props} style={mergeStyle({ border: 'none', borderTop: '1px solid #e2e8f0', margin: '16px 0' }, style)} />
-    ),
-    strong: ({ children, node, style, ...props }: MarkdownTagProps<'strong'>) => (
-        <strong {...props} style={mergeStyle({ fontWeight: 600 }, style)}>{children}</strong>
-    ),
-};
+    );
+}
+
+function buildMarkdownOutline(markdown: string, prefix: string): MarkdownOutlineItem[] {
+    const createId = createHeadingIdFactory(prefix);
+    const items: MarkdownOutlineItem[] = [];
+
+    for (const line of markdown.split(/\r?\n/)) {
+        const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line.trim());
+        if (!match) {
+            continue;
+        }
+
+        const text = normalizeMarkdownText(match[2] || '');
+        if (!text) {
+            continue;
+        }
+
+        items.push({
+            depth: match[1]?.length ?? 1,
+            text,
+            id: createId(text),
+        });
+    }
+
+    return items;
+}
+
+function createHeadingRenderer<Tag extends 'h1' | 'h2' | 'h3' | 'h4'>(
+    tag: Tag,
+    baseStyle: React.CSSProperties,
+    createId: (text: string) => string,
+    onNavigate: (id: string) => void,
+) {
+    return ({ children, node, style, ...props }: MarkdownTagProps<Tag>) => {
+        const text = normalizeMarkdownText(extractPlainText(children));
+        const id = createId(text || tag);
+
+        return React.createElement(
+            tag,
+            {
+                ...props,
+                id,
+                style: mergeStyle(baseStyle, style),
+            },
+            <>
+                {children}
+                {text ? (
+                    <a
+                        href={`#${id}`}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            onNavigate(id);
+                        }}
+                        style={headingAnchorStyle}
+                        aria-label={`Jump to ${text}`}
+                    >
+                        #
+                    </a>
+                ) : null}
+            </>,
+        );
+    };
+}
+
+function hasClassName(node: ExtraProps['node'], className: string): boolean {
+    const raw = node?.properties?.className;
+    if (Array.isArray(raw)) {
+        return raw.includes(className);
+    }
+    return typeof raw === 'string' ? raw.split(' ').includes(className) : false;
+}
+
+function inferCodeLanguage(className?: string): string | undefined {
+    const match = /language-([\w-]+)/.exec(className || '');
+    return match?.[1];
+}
+
+function createMarkdownComponents(prefix: string, onNavigate: (id: string) => void): Components {
+    const createId = createHeadingIdFactory(prefix);
+
+    return {
+        h1: createHeadingRenderer('h1', { fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate),
+        h2: createHeadingRenderer('h2', { fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate),
+        h3: createHeadingRenderer('h3', { fontSize: 18, fontWeight: 600, margin: '20px 0 8px 0' }, createId, onNavigate),
+        h4: createHeadingRenderer('h4', { fontSize: 16, fontWeight: 600, margin: '16px 0 8px 0' }, createId, onNavigate),
+        p: ({ children, node, style, ...props }: MarkdownTagProps<'p'>) => (
+            <p {...props} style={mergeStyle({ margin: '0 0 12px 0' }, style)}>{children}</p>
+        ),
+        ul: ({ children, node, style, ...props }: MarkdownTagProps<'ul'>) => (
+            <ul
+                {...props}
+                style={mergeStyle(
+                    {
+                        margin: '0 0 16px 0',
+                        paddingLeft: hasClassName(node, 'contains-task-list') ? 0 : 24,
+                        listStyle: hasClassName(node, 'contains-task-list') ? 'none' : undefined,
+                    },
+                    style,
+                )}
+            >
+                {children}
+            </ul>
+        ),
+        ol: ({ children, node, style, ...props }: MarkdownTagProps<'ol'>) => (
+            <ol {...props} style={mergeStyle({ margin: '0 0 12px 0', paddingLeft: 24 }, style)}>{children}</ol>
+        ),
+        li: ({ children, node, style, ...props }: MarkdownTagProps<'li'>) => (
+            <li
+                {...props}
+                style={mergeStyle(
+                    {
+                        marginBottom: 8,
+                        display: hasClassName(node, 'task-list-item') ? 'flex' : undefined,
+                        alignItems: hasClassName(node, 'task-list-item') ? 'flex-start' : undefined,
+                        gap: hasClassName(node, 'task-list-item') ? 10 : undefined,
+                    },
+                    style,
+                )}
+            >
+                {children}
+            </li>
+        ),
+        blockquote: ({ children, node, style, ...props }: MarkdownTagProps<'blockquote'>) => (
+            <blockquote {...props} style={mergeStyle({ margin: '0 0 12px 0', padding: '8px 16px', borderLeft: '4px solid #cbd5e1', background: '#f8fafc', color: '#475569' }, style)}>{children}</blockquote>
+        ),
+        code: ({ children, node, className, style, ...props }: MarkdownTagProps<'code'>) => {
+            const codeLanguage = inferCodeLanguage(className);
+            const text = String(children ?? '').replace(/\n$/, '');
+            if (codeLanguage) {
+                return (
+                    <SyntaxHighlighter
+                        language={codeLanguage}
+                        style={oneLight}
+                        PreTag="div"
+                        customStyle={{
+                            margin: 0,
+                            borderRadius: 18,
+                            border: '1px solid rgba(148,163,184,0.14)',
+                            background: '#f8fafc',
+                            padding: '18px 20px',
+                            fontSize: 13,
+                            lineHeight: 1.65,
+                        }}
+                        codeTagProps={{
+                            style: {
+                                fontFamily: monoFont,
+                            },
+                        }}
+                    >
+                        {text}
+                    </SyntaxHighlighter>
+                );
+            }
+            return (
+                <code
+                    {...props}
+                    className={className}
+                    style={mergeStyle({ padding: '2px 6px', borderRadius: 6, background: '#e2e8f0', fontFamily: monoFont, fontSize: 13 }, style)}
+                >
+                    {children}
+                </code>
+            );
+        },
+        pre: ({ children, node, style, ...props }: MarkdownTagProps<'pre'>) => (
+            <MarkdownCodeBlockFrame copySource={extractPlainText(children).replace(/\n$/, '')}>
+                <pre {...props} style={mergeStyle({ margin: 0, overflow: 'auto', background: 'transparent', padding: 0 }, style)}>{children}</pre>
+            </MarkdownCodeBlockFrame>
+        ),
+        a: ({ children, node, href, style, ...props }: MarkdownTagProps<'a'>) => (
+            <a {...props} href={href} target="_blank" rel="noopener noreferrer" style={mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style)}>{children}</a>
+        ),
+        table: ({ children, node, style, ...props }: MarkdownTagProps<'table'>) => (
+            <div style={{ margin: '0 0 18px 0', overflow: 'auto', borderRadius: 18, border: '1px solid rgba(148,163,184,0.16)' }}>
+                <table {...props} style={mergeStyle({ borderCollapse: 'separate', borderSpacing: 0, width: '100%', background: '#ffffff' }, style)}>{children}</table>
+            </div>
+        ),
+        thead: ({ children, node, style, ...props }: MarkdownTagProps<'thead'>) => (
+            <thead {...props} style={mergeStyle({ background: '#f8fafc' }, style)}>{children}</thead>
+        ),
+        tbody: ({ children, node, style, ...props }: MarkdownTagProps<'tbody'>) => (
+            <tbody {...props} style={style}>{children}</tbody>
+        ),
+        tr: ({ children, node, style, ...props }: MarkdownTagProps<'tr'>) => (
+            <tr {...props} style={mergeStyle({ background: '#ffffff' }, style)}>{children}</tr>
+        ),
+        th: ({ children, node, style, ...props }: MarkdownTagProps<'th'>) => (
+            <th {...props} style={mergeStyle({ border: '1px solid #e2e8f0', padding: '8px 12px', background: '#f8fafc', fontWeight: 600, textAlign: 'left' }, style)}>{children}</th>
+        ),
+        td: ({ children, node, style, ...props }: MarkdownTagProps<'td'>) => (
+            <td {...props} style={mergeStyle({ border: '1px solid #e2e8f0', padding: '8px 12px' }, style)}>{children}</td>
+        ),
+        hr: ({ node, style, ...props }: MarkdownTagProps<'hr'>) => (
+            <hr {...props} style={mergeStyle({ border: 'none', borderTop: '1px solid #e2e8f0', margin: '16px 0' }, style)} />
+        ),
+        input: ({ node, style, type, checked, ...props }: MarkdownTagProps<'input'>) => {
+            if (type === 'checkbox') {
+                return (
+                    <input
+                        {...props}
+                        type="checkbox"
+                        checked={checked}
+                        disabled
+                        readOnly
+                        style={mergeStyle({ marginTop: 5, accentColor: '#0ea5e9', width: 16, height: 16, flexShrink: 0 }, style)}
+                    />
+                );
+            }
+            return <input {...props} type={type} checked={checked} style={style} />;
+        },
+        img: ({ node, style, alt, ...props }: MarkdownTagProps<'img'>) => (
+            <img {...props} alt={alt} style={mergeStyle({ maxWidth: '100%', borderRadius: 18, border: '1px solid rgba(148,163,184,0.16)', boxShadow: '0 18px 40px rgba(15,23,42,0.08)' }, style)} />
+        ),
+        strong: ({ children, node, style, ...props }: MarkdownTagProps<'strong'>) => (
+            <strong {...props} style={mergeStyle({ fontWeight: 600 }, style)}>{children}</strong>
+        ),
+    };
+}
 
 export interface AssetEditorProps {
     selectedPath: string;
     selectedEntry: AssetTreeEntry | null;
+    modelPath?: string;
     language: string;
     value: string;
     canEdit: boolean;
     dirty: boolean;
     saving?: boolean;
     entryRevision: number;
+    openTabs?: AssetEditorTab[];
     onChange: (value: string) => void;
-    onSave?: () => void;
+    onSave?: () => Promise<void> | void;
+    onSelectTab?: (path: string) => void;
+    onCloseTab?: (path: string) => void;
     actions?: ReactNode;
+    compact?: boolean;
+    mode?: AssetEditorMode;
+    showModeSwitch?: boolean;
 }
 
 export function AssetEditor({
     selectedPath,
     selectedEntry,
+    modelPath,
     language,
     value,
     canEdit,
     dirty,
     saving = false,
     entryRevision,
+    openTabs = [],
     onChange,
     onSave,
+    onSelectTab,
+    onCloseTab,
     actions,
+    compact = false,
+    mode,
+    showModeSwitch = true,
 }: AssetEditorProps) {
-    const [mode, setMode] = useState<EditorMode>('edit');
+    const [internalMode, setInternalMode] = useState<EditorMode>('edit');
+    const editorRef = useRef<Parameters<NonNullable<OnMount>>[0] | null>(null);
+    const latestSaveRef = useRef(onSave);
+    const latestCanEditRef = useRef(canEdit);
+    const latestSavingRef = useRef(saving);
+    const latestMarkdownRef = useRef(false);
+    const previewRootRef = useRef<HTMLDivElement | null>(null);
     const isMarkdown = language === 'markdown';
+    const activeMode = mode ?? internalMode;
+    const previewAnchorPrefix = useMemo(
+        () => `preview-${slugifyHeading(selectedPath || 'markdown-preview') || 'markdown-preview'}`,
+        [selectedPath],
+    );
+
+    function scrollToAnchor(id: string) {
+        const target = previewRootRef.current?.querySelector<HTMLElement>(`#${id}`);
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    const markdownOutline = useMemo(
+        () => buildMarkdownOutline(value, previewAnchorPrefix),
+        [previewAnchorPrefix, value],
+    );
+    const markdownComponents = useMemo(
+        () => createMarkdownComponents(previewAnchorPrefix, scrollToAnchor),
+        [previewAnchorPrefix],
+    );
 
     useEffect(() => {
-        setMode('edit');
+        latestSaveRef.current = onSave;
+        latestCanEditRef.current = canEdit;
+        latestSavingRef.current = saving;
+        latestMarkdownRef.current = isMarkdown;
+    }, [canEdit, isMarkdown, onSave, saving]);
+
+    useEffect(() => {
+        if (mode === undefined) {
+            setInternalMode('edit');
+        }
     }, [selectedPath]);
+
+    async function runEditorAction(actionId: string) {
+        const editor = editorRef.current;
+        if (!editor) {
+            return;
+        }
+        await editor.getAction(actionId)?.run();
+    }
+
+    async function handleSaveRequest() {
+        if (!latestSaveRef.current || !latestCanEditRef.current || latestSavingRef.current) {
+            return;
+        }
+
+        await runEditorAction('editor.action.formatDocument');
+        await latestSaveRef.current();
+    }
+
+    const handleEditorMount: OnMount = (editor, monaco) => {
+        editorRef.current = editor;
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+            void handleSaveRequest();
+        });
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyM, () => {
+            if (latestMarkdownRef.current) {
+                if (mode === undefined) {
+                    setInternalMode((current) => current === 'edit' ? 'preview' : 'edit');
+                }
+            }
+        });
+    };
+
+    const headerStyle: React.CSSProperties = compact
+        ? { ...subHeaderStyle, padding: '10px 12px', gap: 10 }
+        : subHeaderStyle;
+    const tabsStyle: React.CSSProperties = compact
+        ? { display: 'flex', gap: 6, overflowX: 'auto', padding: '6px 12px', borderBottom: '1px solid rgba(148,163,184,0.12)', background: 'rgba(248,250,252,0.94)' }
+        : { display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 16px', borderBottom: '1px solid rgba(148,163,184,0.12)', background: 'rgba(248,250,252,0.94)' };
+    const compactActionStyle = compact
+        ? { ...secondaryActionStyle(), padding: '5px 9px', fontSize: 11 }
+        : secondaryActionStyle();
+    const saveActionStyle: React.CSSProperties = compact
+        ? { ...buttonBaseStyle, padding: '6px 11px', fontSize: 12 }
+        : buttonBaseStyle;
+    const markdownPreviewContainerStyle: React.CSSProperties = compact
+        ? { ...previewContainerStyle, padding: '16px 18px 20px' }
+        : previewContainerStyle;
+    const markdownPreviewNavStyle: React.CSSProperties = compact
+        ? { ...previewNavStyle, margin: '0 auto 12px', padding: '12px 14px', borderRadius: 16 }
+        : previewNavStyle;
+    const markdownPreviewDocumentStyle: React.CSSProperties = compact
+        ? { ...previewDocumentStyle, padding: '20px 22px 28px', borderRadius: 18 }
+        : previewDocumentStyle;
+    const markdownLeadStyle: React.CSSProperties = compact
+        ? { ...previewLeadStyle, margin: '0 0 16px 0', fontSize: 12 }
+        : previewLeadStyle;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-            <div style={subHeaderStyle}>
+            {openTabs.length > 0 ? (
+                <div style={tabsStyle}>
+                    {openTabs.map((tab) => (
+                        <div key={tab.path} style={tabChipStyle(tab.active)}>
+                            <button
+                                type="button"
+                                onClick={() => onSelectTab?.(tab.path)}
+                                style={{ appearance: 'none', border: 0, background: 'transparent', color: 'inherit', fontSize: 12, fontWeight: 600, cursor: 'pointer', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                            >
+                                {tab.label}{tab.dirty ? ' *' : ''}
+                            </button>
+                            {onCloseTab ? (
+                                <button
+                                    type="button"
+                                    onClick={() => onCloseTab(tab.path)}
+                                    aria-label={`Close ${tab.label}`}
+                                    style={{ appearance: 'none', border: 0, background: 'transparent', color: 'inherit', fontSize: 14, lineHeight: 1, cursor: 'pointer', padding: 0, flexShrink: 0 }}
+                                >
+                                    ×
+                                </button>
+                            ) : null}
+                        </div>
+                    ))}
+                </div>
+            ) : null}
+            <div style={headerStyle}>
                 <div style={{ display: 'grid', gap: 3 }}>
                     <span style={{ fontWeight: 700 }}>{selectedPath || 'Select a file'}</span>
                     {selectedEntry ? (
@@ -151,50 +626,96 @@ export function AssetEditor({
                     ) : null}
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    {isMarkdown ? (
+                    {activeMode === 'edit' && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable ? (
+                        <>
+                            <button type="button" style={compactActionStyle} onClick={() => void runEditorAction('actions.find')}>查找</button>
+                            <button type="button" style={compactActionStyle} onClick={() => void runEditorAction('editor.action.startFindReplaceAction')}>替换</button>
+                            <button type="button" style={compactActionStyle} disabled={!canEdit} onClick={() => void runEditorAction('editor.action.formatDocument')}>格式化</button>
+                        </>
+                    ) : null}
+                    {isMarkdown && showModeSwitch ? (
                         <div style={{ display: 'inline-flex', gap: 2, background: 'rgba(148,163,184,0.10)', borderRadius: 10, padding: 2 }}>
-                            <button type="button" style={tabStyle(mode === 'edit')} onClick={() => setMode('edit')}>Edit</button>
-                            <button type="button" style={tabStyle(mode === 'preview')} onClick={() => setMode('preview')}>Preview</button>
+                            <button type="button" style={tabStyle(activeMode === 'edit')} onClick={() => setInternalMode('edit')}>编辑</button>
+                            <button type="button" style={tabStyle(activeMode === 'preview')} onClick={() => setInternalMode('preview')}>预览</button>
                         </div>
                     ) : null}
                     {actions}
                     {onSave ? (
-                        <button type="button" style={buttonBaseStyle} disabled={!canEdit || saving || !dirty} onClick={onSave}>
-                            {saving ? 'Saving...' : 'Save'}
+                        <button type="button" style={saveActionStyle} disabled={!canEdit || saving || !dirty} onClick={() => void handleSaveRequest()}>
+                            {saving ? '保存中...' : '保存'}
                         </button>
                     ) : null}
                 </div>
             </div>
-            {mode === 'preview' && isMarkdown ? (
-                <div style={previewContainerStyle}>
-                    <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                        {value}
-                    </Markdown>
+            {activeMode === 'preview' && isMarkdown ? (
+                <div style={markdownPreviewContainerStyle}>
+                    {markdownOutline.length > 0 ? (
+                        <nav style={markdownPreviewNavStyle} aria-label="Table of contents">
+                            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                                文档目录
+                            </div>
+                            <div style={{ display: 'grid', gap: 2 }}>
+                                {markdownOutline.map((item) => (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        style={previewNavItemStyle(item.depth)}
+                                        onClick={() => scrollToAnchor(item.id)}
+                                    >
+                                        {item.text}
+                                    </button>
+                                ))}
+                            </div>
+                        </nav>
+                    ) : null}
+                    <article style={markdownPreviewDocumentStyle}>
+                        <div style={markdownLeadStyle}>阅读视图 · GitHub Flavored Markdown · 使用 react-markdown 渲染</div>
+                        <div ref={previewRootRef}>
+                            <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                                {value}
+                            </Markdown>
+                        </div>
+                    </article>
                 </div>
             ) : (
                 <div style={{ flex: 1, minHeight: 0 }}>
                     {!selectedEntry ? (
-                        <EmptyMessage title="No file selected" message="Choose a file from the tree to preview or edit." />
+                        <EmptyMessage title="尚未选择文件" message="请先从左侧目录树选择一个文件，再进行查看或编辑。" />
                     ) : selectedEntry.entryKind !== 'file' ? (
-                        <EmptyMessage title="Directory selected" message="Select a file node to open the editor." />
+                        <EmptyMessage title="当前为目录" message="请选择文件节点后再打开编辑区。" />
                     ) : !selectedEntry.isTextPreviewable ? (
-                        <EmptyMessage title="Binary file" message="This entry cannot be previewed as text." />
+                        <EmptyMessage title="二进制文件" message="当前资源不支持文本预览。" />
                     ) : (
                         <Editor
                             height="100%"
                             defaultLanguage="plaintext"
+                            path={modelPath}
                             language={language}
                             theme="vs-light"
                             value={value}
+                            onMount={handleEditorMount}
                             onChange={(next) => onChange(next ?? '')}
+                            saveViewState
+                            keepCurrentModel
                             options={{
                                 readOnly: !canEdit,
                                 minimap: { enabled: false },
                                 smoothScrolling: true,
-                                fontSize: 13,
+                                fontSize: compact ? 12 : 13,
                                 fontFamily: monoFont,
                                 wordWrap: 'on',
                                 automaticLayout: true,
+                                formatOnPaste: canEdit,
+                                formatOnType: canEdit,
+                                scrollBeyondLastLine: false,
+                                contextmenu: true,
+                                padding: compact ? { top: 10, bottom: 14 } : { top: 16, bottom: 24 },
+                                guides: { indentation: true },
+                                find: {
+                                    addExtraSpaceOnTop: false,
+                                    autoFindInSelection: 'multiline',
+                                    seedSearchStringFromSelection: 'selection',
+                                },
                             }}
                         />
                     )}

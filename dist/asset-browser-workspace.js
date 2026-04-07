@@ -29,6 +29,8 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
     const [originalText, setOriginalText] = useState('');
     const [entryRevision, setEntryRevision] = useState(0);
     const [editorLanguage, setEditorLanguage] = useState('plaintext');
+    const [editorSessions, setEditorSessions] = useState({});
+    const [openEditorPaths, setOpenEditorPaths] = useState([]);
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
     const [status, setStatus] = useState(null);
@@ -41,6 +43,10 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
     const [actionBusy, setActionBusy] = useState(false);
     const [exporting, setExporting] = useState(false);
     const mountedRef = useRef(true);
+    const editorSessionsRef = useRef({});
+    useEffect(() => {
+        editorSessionsRef.current = editorSessions;
+    }, [editorSessions]);
     useEffect(() => {
         mountedRef.current = true;
         return () => {
@@ -92,6 +98,8 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
         if (!selectedVersionId) {
             return;
         }
+        setEditorSessions({});
+        setOpenEditorPaths([]);
         void loadTree(selectedVersionId, true);
     }, [selectedVersionId]);
     useEffect(() => {
@@ -103,6 +111,16 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             setEntryRevision(0);
             setEditorLanguage('plaintext');
             setDirty(false);
+            return;
+        }
+        setOpenEditorPaths((current) => current.includes(entry.path) ? current : [...current, entry.path]);
+        const cachedSession = editorSessionsRef.current[entry.path];
+        if (cachedSession && cachedSession.versionId === selectedVersionId) {
+            setOriginalText(cachedSession.originalText);
+            setEditorText(cachedSession.text);
+            setEntryRevision(cachedSession.entryRevision);
+            setEditorLanguage(cachedSession.language);
+            setDirty(cachedSession.dirty);
             return;
         }
         void loadFile(entry, selectedVersionId);
@@ -239,11 +257,26 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             if (!mountedRef.current) {
                 return;
             }
+            const language = languageFor(entry, result.languageHint);
+            const session = {
+                path: entry.path,
+                versionId,
+                entry,
+                text: result.text,
+                originalText: result.text,
+                entryRevision: result.entryRevision,
+                language,
+                dirty: false,
+            };
+            setEditorSessions((current) => ({
+                ...current,
+                [entry.path]: session,
+            }));
             startTransition(() => {
                 setOriginalText(result.text);
                 setEditorText(result.text);
                 setEntryRevision(result.entryRevision);
-                setEditorLanguage(languageFor(entry, result.languageHint));
+                setEditorLanguage(language);
                 setDirty(false);
                 setStatus(result.truncated
                     ? { tone: 'warning', text: 'Preview truncated for large file' }
@@ -258,21 +291,42 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
         try {
             const currentVersion = versions.find((item) => item.versionId === selectedVersionId);
             const draftVersionId = collection?.draftVersionId || versions.find((item) => item.isDraft)?.versionId || '';
+            const diffPathPrefix = selectedEntry?.entryKind === 'directory'
+                ? selectedEntry.path
+                : selectedEntry?.parentPath && selectedEntry.parentPath !== '/'
+                    ? selectedEntry.parentPath
+                    : selectedPath || undefined;
             if (currentVersion?.isDraft && draftVersionId) {
-                const diff = await client.diffDraft(assetSpace, assetId, draftVersionId, { pageSize: 1000 });
+                const diff = await client.diffDraft(assetSpace, assetId, draftVersionId, {
+                    diffMode: 'with_text',
+                    pathPrefix: diffPathPrefix,
+                    pageSize: 1000,
+                });
                 if (!mountedRef.current) {
                     return;
                 }
                 setDiffSummary(diff.summary);
                 setDiffEntries(diff.entries);
-                const targetEntry = diff.entries.find((item) => item.path === selectedPath && item.diffDetailAvailable);
+                const targetEntry = diff.entries.find((item) => item.path === selectedPath);
                 if (!targetEntry || !diff.baseVersion || !diff.draftVersion) {
                     setDiffLeftText(originalText);
                     setDiffRightText(editorText);
                     setDiffLabel('Selected file has no text diff detail');
                     return;
                 }
-                const detail = await client.getDiffEntryDetail(assetSpace, assetId, diff.baseVersion.versionId, diff.draftVersion.versionId, selectedPath);
+                if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
+                    setDiffLeftText(targetEntry.oldPreview);
+                    setDiffRightText(targetEntry.newPreview);
+                    setDiffLabel(`${diff.baseVersion.versionId} -> ${diff.draftVersion.versionId}`);
+                    return;
+                }
+                if (!targetEntry.diffDetailAvailable) {
+                    setDiffLeftText('');
+                    setDiffRightText('');
+                    setDiffLabel('Selected file has no text diff detail');
+                    return;
+                }
+                const detail = await client.getDiffEntryDetail(assetSpace, assetId, diff.baseVersion.versionId, diff.draftVersion.versionId, selectedPath, { diffMode: 'with_text' });
                 if (!mountedRef.current) {
                     return;
                 }
@@ -289,20 +343,36 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                 setDiffLabel('Select another version to compare');
                 return;
             }
-            const diff = await client.diffVersions(assetSpace, assetId, compareVersionId, selectedVersionId, { pageSize: 1000 });
+            const diff = await client.diffVersions(assetSpace, assetId, compareVersionId, selectedVersionId, {
+                diffMode: 'with_text',
+                pathPrefix: diffPathPrefix,
+                pageSize: 1000,
+            });
             if (!mountedRef.current) {
                 return;
             }
             setDiffSummary(diff.summary);
             setDiffEntries(diff.entries);
-            const targetEntry = diff.entries.find((item) => item.path === selectedPath && item.diffDetailAvailable);
+            const targetEntry = diff.entries.find((item) => item.path === selectedPath);
             if (!targetEntry || !diff.leftVersion || !diff.rightVersion) {
                 setDiffLeftText('');
                 setDiffRightText('');
                 setDiffLabel('Selected file has no text diff detail');
                 return;
             }
-            const detail = await client.getDiffEntryDetail(assetSpace, assetId, diff.leftVersion.versionId, diff.rightVersion.versionId, selectedPath);
+            if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
+                setDiffLeftText(targetEntry.oldPreview);
+                setDiffRightText(targetEntry.newPreview);
+                setDiffLabel(`${diff.leftVersion.versionId} -> ${diff.rightVersion.versionId}`);
+                return;
+            }
+            if (!targetEntry.diffDetailAvailable) {
+                setDiffLeftText('');
+                setDiffRightText('');
+                setDiffLabel('Selected file has no text diff detail');
+                return;
+            }
+            const detail = await client.getDiffEntryDetail(assetSpace, assetId, diff.leftVersion.versionId, diff.rightVersion.versionId, selectedPath, { diffMode: 'with_text' });
             if (!mountedRef.current) {
                 return;
             }
@@ -413,6 +483,25 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             setOriginalText(editorText);
             setEntryRevision(result.entryRevision);
             setDirty(false);
+            setEditorSessions((current) => {
+                const existing = selectedEntry ? current[selectedEntry.path] : undefined;
+                if (!selectedEntry) {
+                    return current;
+                }
+                return {
+                    ...current,
+                    [selectedEntry.path]: {
+                        path: selectedEntry.path,
+                        versionId: draftVersionId,
+                        entry: selectedEntry,
+                        text: editorText,
+                        originalText: editorText,
+                        entryRevision: result.entryRevision,
+                        language: existing?.language || editorLanguage,
+                        dirty: false,
+                    },
+                };
+            });
             setStatus({ tone: 'success', text: `Saved revision ${result.entryRevision}` });
             await loadTree(draftVersionId, false);
             if (showDiff) {
@@ -472,6 +561,37 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             }
         }
     }
+    function labelForPath(path) {
+        const segments = path.split('/').filter(Boolean);
+        return segments[segments.length - 1] || path || 'Untitled';
+    }
+    function closeEditorTab(path) {
+        setOpenEditorPaths((current) => {
+            const next = current.filter((item) => item !== path);
+            if (selectedPath === path) {
+                setSelectedPath(next[next.length - 1] || '');
+            }
+            return next;
+        });
+    }
+    const openTabs = openEditorPaths
+        .map((path) => {
+        const session = editorSessions[path];
+        const entry = session?.entry ?? treeEntries.find((item) => item.path === path) ?? null;
+        if (!entry || entry.entryKind !== 'file' || !entry.isTextPreviewable) {
+            return null;
+        }
+        return {
+            path,
+            label: labelForPath(path),
+            active: path === selectedPath,
+            dirty: session?.dirty ?? (path === selectedPath && dirty),
+        };
+    })
+        .filter((item) => item !== null);
+    const currentModelPath = selectedPath && selectedVersionId
+        ? `file:///stew/${encodeURIComponent(assetSpace)}/${encodeURIComponent(assetId)}/${encodeURIComponent(selectedVersionId)}${selectedPath}`
+        : undefined;
     const selectedVersion = versions.find((item) => item.versionId === selectedVersionId) ?? null;
     const selectedCompareVersion = versions.find((item) => item.versionId === compareVersionId) ?? null;
     const isDraftSelected = Boolean(selectedVersion?.isDraft);
@@ -542,20 +662,34 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                                     return next;
                                 });
                             }, renderNodeMeta: renderTreeNodeMeta, renderNodeActions: (node) => (React.createElement("div", { style: { display: 'inline-flex', alignItems: 'center', gap: 6 } },
-                                !node.isDirectory || node.path ? (React.createElement("button", { type: "button", style: {
-                                        ...buttonBaseStyle,
-                                        padding: '4px 8px',
-                                        fontSize: 11,
-                                        lineHeight: 1.2,
-                                    }, disabled: exporting || !selectedVersionId, onClick: () => void handleExport(node.path) }, "Export")) : null,
+                                !node.isDirectory || node.path ? (React.createElement("button", { type: "button", className: "stew-asset-tree__action-button", disabled: exporting || !selectedVersionId, onClick: () => void handleExport(node.path) },
+                                    React.createElement("span", { className: "stew-asset-tree__action-icon", "aria-hidden": "true" },
+                                        React.createElement(DownloadIcon, null)),
+                                    React.createElement("span", null, "Export"))) : null,
                                 renderTreeNodeActions ? renderTreeNodeActions(node) : null)) }))),
                 React.createElement(Separator, { style: panelHandleStyle }),
                 React.createElement(Panel, { defaultSize: showDiff ? 44 : 76, minSize: 32 },
                     React.createElement("div", { style: sectionStyle },
-                        React.createElement(AssetEditor, { selectedPath: selectedPath, selectedEntry: selectedEntry, language: editorLanguage, value: editorText, canEdit: canEdit, dirty: dirty, saving: saving, entryRevision: entryRevision, onChange: (value) => {
+                        React.createElement(AssetEditor, { selectedPath: selectedPath, selectedEntry: selectedEntry, modelPath: currentModelPath, language: editorLanguage, value: editorText, canEdit: canEdit, dirty: dirty, saving: saving, entryRevision: entryRevision, openTabs: openTabs, onChange: (value) => {
+                                const nextDirty = value !== originalText;
                                 setEditorText(value);
-                                setDirty(value !== originalText);
-                            }, onSave: canEdit ? () => void handleSave() : undefined, actions: renderEditorActions ? renderEditorActions(actionContext) : null }))),
+                                setDirty(nextDirty);
+                                if (selectedEntry?.entryKind === 'file') {
+                                    setEditorSessions((current) => ({
+                                        ...current,
+                                        [selectedEntry.path]: {
+                                            path: selectedEntry.path,
+                                            versionId: selectedVersionId,
+                                            entry: selectedEntry,
+                                            text: value,
+                                            originalText,
+                                            entryRevision,
+                                            language: editorLanguage,
+                                            dirty: nextDirty,
+                                        },
+                                    }));
+                                }
+                            }, onSave: canEdit ? () => void handleSave() : undefined, onSelectTab: (path) => setSelectedPath(path), onCloseTab: closeEditorTab, actions: renderEditorActions ? renderEditorActions(actionContext) : null }))),
                 showDiff ? (React.createElement(React.Fragment, null,
                     React.createElement(Separator, { style: panelHandleStyle }),
                     React.createElement(Panel, { defaultSize: 32, minSize: 20 },
@@ -566,4 +700,10 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             selectedCompareVersion.versionId,
             " when diff mode is enabled.")) : null,
         renderFooter ? (React.createElement("div", { style: { padding: '12px 18px', borderTop: '1px solid rgba(148,163,184,0.10)', background: 'rgba(248,250,252,0.92)' } }, renderFooter(actionContext))) : null));
+}
+function DownloadIcon() {
+    return (React.createElement("svg", { viewBox: "0 0 12 12", fill: "none" },
+        React.createElement("path", { d: "M6 1.75V7.25", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" }),
+        React.createElement("path", { d: "M3.75 5.5L6 7.75L8.25 5.5", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round", strokeLinejoin: "round" }),
+        React.createElement("path", { d: "M2 9.25H10", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" })));
 }

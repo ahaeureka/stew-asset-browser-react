@@ -1,8 +1,12 @@
 "use client";
 
-import React, { type CSSProperties, type ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
+import Tree from 'rc-tree';
+import type { BasicDataNode } from 'rc-tree';
+import 'rc-tree/assets/index.css';
 import type { AssetTreeEntry } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 import { EmptyMessage, formatBytes, subHeaderStyle, type TreeNode } from './asset-browser-shared';
+import './asset-tree.css';
 
 export interface AssetTreeProps {
     title?: string;
@@ -16,6 +20,17 @@ export interface AssetTreeProps {
     onToggle: (path: string) => void;
     renderNodeMeta?: (node: TreeNode) => ReactNode;
     renderNodeActions?: (node: TreeNode) => ReactNode;
+    compact?: boolean;
+}
+
+interface AssetTreeDataNode extends BasicDataNode {
+    key: string;
+    title: string;
+    path: string;
+    isDirectory: boolean;
+    entry?: AssetTreeEntry;
+    rawNode: TreeNode;
+    children?: AssetTreeDataNode[];
 }
 
 export function AssetTree({
@@ -30,138 +45,162 @@ export function AssetTree({
     onToggle,
     renderNodeMeta,
     renderNodeActions,
+    compact = false,
 }: AssetTreeProps) {
+    const treeData = nodes.map(toTreeDataNode);
+    const expandedKeys = Array.from(expandedPaths);
+    const selectedKeys = selectedPath ? [selectedPath] : [];
+    const containerStyle: React.CSSProperties = compact
+        ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'rgba(255,255,255,0.72)' }
+        : { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'rgba(255,255,255,0.72)' };
+    const headerStyle: React.CSSProperties = compact
+        ? { ...subHeaderStyle, padding: '6px 8px', minHeight: 0, fontSize: 11 }
+        : subHeaderStyle;
+    const bodyStyle: React.CSSProperties = compact
+        ? { padding: '4px 6px 6px', overflow: 'auto', minHeight: 0, flex: 1 }
+        : { padding: '10px 10px 14px', overflow: 'auto', minHeight: 0, flex: 1 };
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'rgba(255,255,255,0.72)' }}>
-            <div style={subHeaderStyle}>{title}</div>
-            <div style={{ padding: '10px 10px 14px', overflow: 'auto', minHeight: 0, flex: 1 }}>
+        <div style={containerStyle}>
+            <div style={headerStyle}>{title}</div>
+            <div style={bodyStyle}>
                 {loading ? (
                     <EmptyMessage title="Loading assets" message="Fetching collection, versions, and tree." />
                 ) : nodes.length === 0 ? (
                     <EmptyMessage title={emptyTitle} message={emptyMessage} />
                 ) : (
-                    <div style={{ display: 'grid', gap: 2 }}>
-                        {nodes.map((node) => (
-                            <TreeNodeRow
-                                key={node.id}
-                                node={node}
-                                level={0}
-                                expandedPaths={expandedPaths}
-                                selectedPath={selectedPath}
-                                onSelect={onSelect}
-                                onToggle={onToggle}
+                    <Tree<AssetTreeDataNode>
+                        className="stew-asset-tree"
+                        treeData={treeData}
+                        expandedKeys={expandedKeys}
+                        selectedKeys={selectedKeys}
+                        selectable
+                        showIcon={false}
+                        switcherIcon={(nodeProps) => (
+                            <span
+                                className={`stew-asset-tree__switcher${nodeProps.isLeaf ? ' is-leaf' : ''}`}
+                                aria-hidden="true"
+                            >
+                                {nodeProps.isLeaf ? <span className="stew-asset-tree__switcher-spacer" /> : <ChevronIcon expanded={Boolean(nodeProps.expanded)} />}
+                            </span>
+                        )}
+                        titleRender={(dataNode) => (
+                            <TreeRowTitle
+                                node={dataNode.rawNode}
+                                selected={selectedPath === dataNode.path}
                                 renderNodeMeta={renderNodeMeta}
                                 renderNodeActions={renderNodeActions}
                             />
-                        ))}
-                    </div>
+                        )}
+                        onExpand={(nextExpandedKeys, info) => {
+                            const nextSet = new Set(nextExpandedKeys.map((key) => String(key)));
+                            const currentSet = new Set(expandedKeys);
+
+                            for (const key of nextSet) {
+                                if (!currentSet.has(key)) {
+                                    onToggle(key);
+                                }
+                            }
+
+                            for (const key of currentSet) {
+                                if (!nextSet.has(key)) {
+                                    onToggle(key);
+                                }
+                            }
+                        }}
+                        onSelect={(keys, info) => {
+                            const selectedNode = info.node as AssetTreeDataNode;
+                            const path = String((keys[0] ?? selectedNode.key) || '');
+                            onSelect(path, selectedNode.entry);
+                        }}
+                    />
                 )}
             </div>
         </div>
     );
 }
 
-function TreeNodeRow({
+function TreeRowTitle({
     node,
-    level,
-    expandedPaths,
-    selectedPath,
-    onSelect,
-    onToggle,
+    selected,
     renderNodeMeta,
     renderNodeActions,
 }: {
     node: TreeNode;
-    level: number;
-    expandedPaths: Set<string>;
-    selectedPath: string;
-    onSelect: (path: string, entry?: AssetTreeEntry) => void;
-    onToggle: (path: string) => void;
+    selected: boolean;
     renderNodeMeta?: (node: TreeNode) => ReactNode;
     renderNodeActions?: (node: TreeNode) => ReactNode;
 }) {
-    const expanded = expandedPaths.has(node.path);
-    const selected = selectedPath === node.path;
+    const nodeMeta = renderNodeMeta
+        ? renderNodeMeta(node)
+        : node.entry?.entryKind === 'file'
+            ? formatBytes(node.entry.sizeBytes)
+            : null;
     const nodeActions = renderNodeActions ? renderNodeActions(node) : null;
 
     return (
-        <div>
-            <div
-                style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    background: selected ? 'rgba(14,165,233,0.10)' : 'transparent',
-                    borderRadius: 12,
-                }}
-            >
-                <button
-                    type="button"
-                    onClick={() => {
-                        if (node.isDirectory) {
-                            onToggle(node.path);
-                        }
-                        onSelect(node.path, node.entry);
-                    }}
-                    style={{
-                        flex: 1,
-                        minWidth: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        textAlign: 'left',
-                        border: 0,
-                        padding: '8px 10px',
-                        paddingLeft: 10 + level * 18,
-                        background: 'transparent',
-                        color: selected ? '#0369a1' : '#0f172a',
-                        cursor: 'pointer',
-                    }}
+        <div
+            className="stew-asset-tree__row"
+            data-selected={selected ? 'true' : 'false'}
+            data-directory={node.isDirectory ? 'true' : 'false'}
+        >
+            <span className="stew-asset-tree__leading">
+                <span className="stew-asset-tree__glyph" aria-hidden="true">
+                    {node.isDirectory ? <FolderIcon /> : <FileIcon />}
+                </span>
+                <span className="stew-asset-tree__label">{node.name}</span>
+            </span>
+            {nodeMeta ? <span className="stew-asset-tree__meta">{nodeMeta}</span> : null}
+            {nodeActions ? (
+                <span
+                    onClick={(event) => event.stopPropagation()}
+                    className="stew-asset-tree__actions"
                 >
-                    <span style={{ width: 16, color: '#64748b', flexShrink: 0 }}>{node.isDirectory ? (expanded ? '-' : '+') : '·'}</span>
-                    <span style={{ fontSize: 13, fontWeight: node.isDirectory ? 700 : 500, minWidth: 0 }}>{node.name}</span>
-                    <span style={nodeMetaStyle}>
-                        {renderNodeMeta
-                            ? renderNodeMeta(node)
-                            : node.entry?.entryKind === 'file'
-                                ? formatBytes(node.entry.sizeBytes)
-                                : null}
-                    </span>
-                </button>
-                {nodeActions ? (
-                    <span
-                        onClick={(event) => event.stopPropagation()}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, paddingRight: 10, flexShrink: 0 }}
-                    >
-                        {nodeActions}
-                    </span>
-                ) : null}
-            </div>
-            {node.isDirectory && expanded && node.children.length > 0 ? (
-                <div>
-                    {node.children.map((child) => (
-                        <TreeNodeRow
-                            key={child.id}
-                            node={child}
-                            level={level + 1}
-                            expandedPaths={expandedPaths}
-                            selectedPath={selectedPath}
-                            onSelect={onSelect}
-                            onToggle={onToggle}
-                            renderNodeMeta={renderNodeMeta}
-                            renderNodeActions={renderNodeActions}
-                        />
-                    ))}
-                </div>
+                    {nodeActions}
+                </span>
             ) : null}
         </div>
     );
 }
 
-const nodeMetaStyle: CSSProperties = {
-    marginLeft: 'auto',
-    minWidth: 0,
-    fontSize: 11,
-    color: '#64748b',
-};
+function toTreeDataNode(node: TreeNode): AssetTreeDataNode {
+    return {
+        key: node.path,
+        title: node.name,
+        path: node.path,
+        isDirectory: node.isDirectory,
+        entry: node.entry,
+        rawNode: node,
+        isLeaf: !node.isDirectory,
+        children: node.children.map(toTreeDataNode),
+    };
+}
+
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+    return (
+        <svg className={`stew-asset-tree__chevron${expanded ? ' is-expanded' : ''}`} viewBox="0 0 12 12" fill="none">
+            <path d="M4 2.75L7.5 6L4 9.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function FolderIcon() {
+    return (
+        <svg className="stew-asset-tree__svg" viewBox="0 0 20 20" fill="none">
+            <path d="M2.5 5.75C2.5 4.64543 3.39543 3.75 4.5 3.75H7.22508C7.78506 3.75 8.31713 3.9849 8.69583 4.39755L9.67917 5.46912C10.0579 5.88177 10.5899 6.11667 11.1499 6.11667H15.5C16.6046 6.11667 17.5 7.0121 17.5 8.11667V13.75C17.5 14.8546 16.6046 15.75 15.5 15.75H4.5C3.39543 15.75 2.5 14.8546 2.5 13.75V5.75Z" fill="currentColor" opacity="0.18" />
+            <path d="M2.5 6.25C2.5 5.14543 3.39543 4.25 4.5 4.25H7.22508C7.78506 4.25 8.31713 4.4849 8.69583 4.89755L9.67917 5.96912C10.0579 6.38177 10.5899 6.61667 11.1499 6.61667H15.5C16.6046 6.61667 17.5 7.5121 17.5 8.61667V13.75C17.5 14.8546 16.6046 15.75 15.5 15.75H4.5C3.39543 15.75 2.5 14.8546 2.5 13.75V6.25Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function FileIcon() {
+    return (
+        <svg className="stew-asset-tree__svg" viewBox="0 0 20 20" fill="none">
+            <path d="M5 3.75H10.4645C10.8623 3.75 11.2439 3.90804 11.5251 4.18934L14.8107 7.47487C15.092 7.75618 15.25 8.13768 15.25 8.53553V14.25C15.25 15.3546 14.3546 16.25 13.25 16.25H5C3.89543 16.25 3 15.3546 3 14.25V5.75C3 4.64543 3.89543 3.75 5 3.75Z" fill="currentColor" opacity="0.12" />
+            <path d="M10.25 3.75V7.25C10.25 7.80228 10.6977 8.25 11.25 8.25H14.75" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M5 3.75H10.4645C10.8623 3.75 11.2439 3.90804 11.5251 4.18934L14.8107 7.47487C15.092 7.75618 15.25 8.13768 15.25 8.53553V14.25C15.25 15.3546 14.3546 16.25 13.25 16.25H5C3.89543 16.25 3 15.3546 3 14.25V5.75C3 4.64543 3.89543 3.75 5 3.75Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+            <path d="M6.5 11H11.75" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            <path d="M6.5 13.25H10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
+    );
+}
