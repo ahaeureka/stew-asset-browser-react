@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from 'react';
+import React, { type CSSProperties, type ReactNode } from 'react';
 import type { AssetTreeEntry } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 import { EmptyMessage, formatBytes, subHeaderStyle, type TreeNode } from './asset-browser-shared';
 
@@ -82,42 +82,62 @@ function TreeNodeRow({
 }) {
     const expanded = expandedPaths.has(node.path);
     const selected = selectedPath === node.path;
+    const nodeActions = renderNodeActions ? renderNodeActions(node) : null;
+
     return (
         <div>
-            <button
-                type="button"
-                onClick={() => {
-                    if (node.isDirectory) {
-                        onToggle(node.path);
-                    }
-                    onSelect(node.path, node.entry);
-                }}
+            <div
                 style={{
                     width: '100%',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    textAlign: 'left',
-                    border: 0,
-                    padding: '8px 10px',
-                    paddingLeft: 10 + level * 18,
                     background: selected ? 'rgba(14,165,233,0.10)' : 'transparent',
-                    color: selected ? '#0369a1' : '#0f172a',
                     borderRadius: 12,
-                    cursor: 'pointer',
                 }}
             >
-                <span style={{ width: 16, color: '#64748b' }}>{node.isDirectory ? (expanded ? '-' : '+') : '·'}</span>
-                <span style={{ fontSize: 13, fontWeight: node.isDirectory ? 700 : 500 }}>{node.name}</span>
-                <span style={nodeMetaStyle}>
-                    {renderNodeMeta
-                        ? renderNodeMeta(node)
-                        : node.entry?.entryKind === 'file'
-                            ? formatBytes(node.entry.sizeBytes)
-                            : null}
-                </span>
-                {renderNodeActions ? <span onClick={(event) => event.stopPropagation()}>{renderNodeActions(node)}</span> : null}
-            </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        if (node.isDirectory) {
+                            onToggle(node.path);
+                        }
+                        onSelect(node.path, node.entry);
+                    }}
+                    style={{
+                        flex: 1,
+                        minWidth: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        textAlign: 'left',
+                        border: 0,
+                        padding: '8px 10px',
+                        paddingLeft: 10 + level * 18,
+                        background: 'transparent',
+                        color: selected ? '#0369a1' : '#0f172a',
+                        cursor: 'pointer',
+                    }}
+                >
+                    <span style={{ width: 16, color: '#64748b', flexShrink: 0 }}>{node.isDirectory ? (expanded ? '-' : '+') : '·'}</span>
+                    <span style={{ fontSize: 13, fontWeight: node.isDirectory ? 700 : 500, minWidth: 0 }}>{node.name}</span>
+                    <span style={nodeMetaStyle}>
+                        {renderNodeMeta
+                            ? renderNodeMeta(node)
+                            : node.entry?.entryKind === 'file'
+                                ? formatBytes(node.entry.sizeBytes)
+                                : null}
+                    </span>
+                </button>
+                {nodeActions ? (
+                    <span
+                        onClick={(event) => event.stopPropagation()}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, paddingRight: 10, flexShrink: 0 }}
+                    >
+                        {nodeActions}
+                    </span>
+                ) : null}
+            </div>
             {node.isDirectory && expanded && node.children.length > 0 ? (
                 <div>
                     {node.children.map((child) => (
@@ -141,6 +161,7 @@ function TreeNodeRow({
 
 const nodeMetaStyle: CSSProperties = {
     marginLeft: 'auto',
+    minWidth: 0,
     fontSize: 11,
     color: '#64748b',
 };

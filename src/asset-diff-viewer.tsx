@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
 import type { AssetDiffEntry, AssetDiffSummary } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 import {

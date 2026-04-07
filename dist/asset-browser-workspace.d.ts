@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode } from 'react';
+import React, { type CSSProperties, type ReactNode } from 'react';
 import { AssetBrowserClient } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 import { type AssetBrowserActionContext, type AssetBrowserWorkspaceCallbacks, type AssetBrowserWorkspaceState, type TreeNode } from './asset-browser-shared';
 export interface AssetBrowserWorkspaceProps {
@@ -26,4 +26,4 @@ export interface AssetBrowserWorkspaceProps {
     renderTreeNodeMeta?: (node: TreeNode) => ReactNode;
     renderTreeNodeActions?: (node: TreeNode) => ReactNode;
 }
-export declare function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVersionId, initialFolder, height, title, className, style, enableEditing, defaultDraftDescription, callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, }: AssetBrowserWorkspaceProps): import("react/jsx-runtime").JSX.Element;
+export declare function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVersionId, initialFolder, height, title, className, style, enableEditing, defaultDraftDescription, callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, }: AssetBrowserWorkspaceProps): React.JSX.Element;

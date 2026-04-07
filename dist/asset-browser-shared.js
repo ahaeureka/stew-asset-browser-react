@@ -1,5 +1,5 @@
 "use client";
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import React from 'react';
 export const shellStyle = {
     border: '1px solid rgba(15, 23, 42, 0.12)',
     borderRadius: 20,
@@ -99,6 +99,7 @@ export function formatBytes(bytes) {
 }
 export function languageFor(entry, hint) {
     const value = (hint || entry?.languageHint || entry?.contentType || '').toLowerCase();
+    const pathValue = (entry?.path || '').toLowerCase();
     if (value.includes('typescript'))
         return 'typescript';
     if (value.includes('javascript'))
@@ -109,6 +110,8 @@ export function languageFor(entry, hint) {
         return 'yaml';
     if (value.includes('toml'))
         return 'toml';
+    if (/\.(md|markdown|mdown|mkd|mkdn|mdx)$/.test(pathValue))
+        return 'markdown';
     if (value.includes('markdown'))
         return 'markdown';
     if (value.includes('html'))
@@ -189,7 +192,7 @@ export function collectInitialExpanded(nodes) {
     return expanded;
 }
 export function pill(label, value) {
-    return (_jsxs("span", { style: {
+    return (React.createElement("span", { key: `${label}:${value}`, style: {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
@@ -199,8 +202,13 @@ export function pill(label, value) {
             color: '#334155',
             fontSize: 12,
             fontWeight: 600,
-        }, children: [_jsx("span", { style: { color: '#64748b' }, children: label }), _jsx("span", { children: value })] }, `${label}:${value}`));
+        } },
+        React.createElement("span", { style: { color: '#64748b' } }, label),
+        React.createElement("span", null, value)));
 }
 export function EmptyMessage({ title, message }) {
-    return (_jsx("div", { style: { height: '100%', display: 'grid', placeItems: 'center', padding: 24 }, children: _jsxs("div", { style: { maxWidth: 320, textAlign: 'center', display: 'grid', gap: 8 }, children: [_jsx("div", { style: { fontSize: 16, fontWeight: 700, color: '#0f172a' }, children: title }), _jsx("div", { style: { fontSize: 13, lineHeight: 1.6, color: '#64748b' }, children: message })] }) }));
+    return (React.createElement("div", { style: { height: '100%', display: 'grid', placeItems: 'center', padding: 24 } },
+        React.createElement("div", { style: { maxWidth: 320, textAlign: 'center', display: 'grid', gap: 8 } },
+            React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: '#0f172a' } }, title),
+            React.createElement("div", { style: { fontSize: 13, lineHeight: 1.6, color: '#64748b' } }, message))));
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import {
+import React, {
     type CSSProperties,
     type ReactNode,
     startTransition,
@@ -8,7 +8,14 @@ import {
     useRef,
     useState,
 } from 'react';
-import { Group, Panel, Separator } from 'react-resizable-panels';
+import {
+    Group as GroupPrimitive,
+    Panel as PanelPrimitive,
+    Separator as SeparatorPrimitive,
+    type GroupProps,
+    type PanelProps,
+    type SeparatorProps,
+} from 'react-resizable-panels';
 import {
     type AssetCollection,
     type AssetDiffEntry,
@@ -41,6 +48,18 @@ import {
     type TreeNode,
 } from './asset-browser-shared';
 import { AssetTree } from './asset-tree';
+
+function Group(props: GroupProps): React.ReactElement {
+    return React.createElement(GroupPrimitive as unknown as React.ElementType, props);
+}
+
+function Panel(props: PanelProps): React.ReactElement {
+    return React.createElement(PanelPrimitive as unknown as React.ElementType, props);
+}
+
+function Separator(props: SeparatorProps): React.ReactElement {
+    return React.createElement(SeparatorPrimitive as unknown as React.ElementType, props);
+}
 
 interface ActionContextOverrides {
     collection?: AssetCollection | null;

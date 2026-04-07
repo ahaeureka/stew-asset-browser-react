@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import type { AssetDiffEntry, AssetDiffSummary } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 export interface AssetDiffViewerProps {
     label: string;
@@ -11,4 +11,4 @@ export interface AssetDiffViewerProps {
     onSelectEntry?: (path: string) => void;
     actions?: ReactNode;
 }
-export declare function AssetDiffViewer({ label, language, summary, entries, selectedPath, originalText, modifiedText, onSelectEntry, actions, }: AssetDiffViewerProps): import("react/jsx-runtime").JSX.Element;
+export declare function AssetDiffViewer({ label, language, summary, entries, selectedPath, originalText, modifiedText, onSelectEntry, actions, }: AssetDiffViewerProps): React.JSX.Element;

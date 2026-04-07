@@ -1,8 +1,8 @@
 "use client";
 
-import { type ReactNode, useState, useEffect } from 'react';
+import React, { type ReactNode, useState, useEffect } from 'react';
 import { Editor } from '@monaco-editor/react';
-import Markdown from 'react-markdown';
+import Markdown, { type Components, type ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { AssetTreeEntry } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 import {
@@ -38,65 +38,70 @@ const previewContainerStyle: React.CSSProperties = {
     background: '#ffffff',
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const markdownComponents: Record<string, any> = {
-    h1: ({ children }: { children: ReactNode }) => (
-        <h1 style={{ fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }}>{children}</h1>
+type MarkdownTagProps<Tag extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[Tag] & ExtraProps;
+
+function mergeStyle(base: React.CSSProperties, extra?: React.CSSProperties): React.CSSProperties {
+    return extra ? { ...base, ...extra } : base;
+}
+
+const markdownComponents: Components = {
+    h1: ({ children, node, style, ...props }: MarkdownTagProps<'h1'>) => (
+        <h1 {...props} style={mergeStyle({ fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }, style)}>{children}</h1>
     ),
-    h2: ({ children }: { children: ReactNode }) => (
-        <h2 style={{ fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }}>{children}</h2>
+    h2: ({ children, node, style, ...props }: MarkdownTagProps<'h2'>) => (
+        <h2 {...props} style={mergeStyle({ fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }, style)}>{children}</h2>
     ),
-    h3: ({ children }: { children: ReactNode }) => (
-        <h3 style={{ fontSize: 18, fontWeight: 600, margin: '20px 0 8px 0' }}>{children}</h3>
+    h3: ({ children, node, style, ...props }: MarkdownTagProps<'h3'>) => (
+        <h3 {...props} style={mergeStyle({ fontSize: 18, fontWeight: 600, margin: '20px 0 8px 0' }, style)}>{children}</h3>
     ),
-    h4: ({ children }: { children: ReactNode }) => (
-        <h4 style={{ fontSize: 16, fontWeight: 600, margin: '16px 0 8px 0' }}>{children}</h4>
+    h4: ({ children, node, style, ...props }: MarkdownTagProps<'h4'>) => (
+        <h4 {...props} style={mergeStyle({ fontSize: 16, fontWeight: 600, margin: '16px 0 8px 0' }, style)}>{children}</h4>
     ),
-    p: ({ children }: { children: ReactNode }) => (
-        <p style={{ margin: '0 0 12px 0' }}>{children}</p>
+    p: ({ children, node, style, ...props }: MarkdownTagProps<'p'>) => (
+        <p {...props} style={mergeStyle({ margin: '0 0 12px 0' }, style)}>{children}</p>
     ),
-    ul: ({ children }: { children: ReactNode }) => (
-        <ul style={{ margin: '0 0 12px 0', paddingLeft: 24 }}>{children}</ul>
+    ul: ({ children, node, style, ...props }: MarkdownTagProps<'ul'>) => (
+        <ul {...props} style={mergeStyle({ margin: '0 0 12px 0', paddingLeft: 24 }, style)}>{children}</ul>
     ),
-    ol: ({ children }: { children: ReactNode }) => (
-        <ol style={{ margin: '0 0 12px 0', paddingLeft: 24 }}>{children}</ol>
+    ol: ({ children, node, style, ...props }: MarkdownTagProps<'ol'>) => (
+        <ol {...props} style={mergeStyle({ margin: '0 0 12px 0', paddingLeft: 24 }, style)}>{children}</ol>
     ),
-    li: ({ children }: { children: ReactNode }) => (
-        <li style={{ marginBottom: 4 }}>{children}</li>
+    li: ({ children, node, style, ...props }: MarkdownTagProps<'li'>) => (
+        <li {...props} style={mergeStyle({ marginBottom: 4 }, style)}>{children}</li>
     ),
-    blockquote: ({ children }: { children: ReactNode }) => (
-        <blockquote style={{ margin: '0 0 12px 0', padding: '8px 16px', borderLeft: '4px solid #cbd5e1', background: '#f8fafc', color: '#475569' }}>{children}</blockquote>
+    blockquote: ({ children, node, style, ...props }: MarkdownTagProps<'blockquote'>) => (
+        <blockquote {...props} style={mergeStyle({ margin: '0 0 12px 0', padding: '8px 16px', borderLeft: '4px solid #cbd5e1', background: '#f8fafc', color: '#475569' }, style)}>{children}</blockquote>
     ),
-    code: ({ children, className }: { children: ReactNode; className?: string }) => {
+    code: ({ children, node, className, style, ...props }: MarkdownTagProps<'code'>) => {
         const isBlock = Boolean(className);
         return isBlock ? (
-            <code style={{ display: 'block', padding: 16, borderRadius: 8, background: '#f1f5f9', fontFamily: monoFont, fontSize: 13, overflow: 'auto' }}>{children}</code>
+            <code {...props} className={className} style={mergeStyle({ display: 'block', padding: 16, borderRadius: 8, background: '#f1f5f9', fontFamily: monoFont, fontSize: 13, overflow: 'auto' }, style)}>{children}</code>
         ) : (
-            <code style={{ padding: '2px 6px', borderRadius: 4, background: '#f1f5f9', fontFamily: monoFont, fontSize: 13 }}>{children}</code>
+            <code {...props} className={className} style={mergeStyle({ padding: '2px 6px', borderRadius: 4, background: '#f1f5f9', fontFamily: monoFont, fontSize: 13 }, style)}>{children}</code>
         );
     },
-    pre: ({ children }: { children: ReactNode }) => (
-        <pre style={{ margin: '0 0 12px 0', padding: 0, background: 'transparent', overflow: 'auto' }}>{children}</pre>
+    pre: ({ children, node, style, ...props }: MarkdownTagProps<'pre'>) => (
+        <pre {...props} style={mergeStyle({ margin: '0 0 12px 0', padding: 0, background: 'transparent', overflow: 'auto' }, style)}>{children}</pre>
     ),
-    a: ({ children, href }: { children: ReactNode; href?: string }) => (
-        <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'none' }}>{children}</a>
+    a: ({ children, node, href, style, ...props }: MarkdownTagProps<'a'>) => (
+        <a {...props} href={href} target="_blank" rel="noopener noreferrer" style={mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style)}>{children}</a>
     ),
-    table: ({ children }: { children: ReactNode }) => (
+    table: ({ children, node, style, ...props }: MarkdownTagProps<'table'>) => (
         <div style={{ margin: '0 0 12px 0', overflow: 'auto' }}>
-            <table style={{ borderCollapse: 'collapse', width: '100%' }}>{children}</table>
+            <table {...props} style={mergeStyle({ borderCollapse: 'collapse', width: '100%' }, style)}>{children}</table>
         </div>
     ),
-    th: ({ children }: { children: ReactNode }) => (
-        <th style={{ border: '1px solid #e2e8f0', padding: '8px 12px', background: '#f8fafc', fontWeight: 600, textAlign: 'left' }}>{children}</th>
+    th: ({ children, node, style, ...props }: MarkdownTagProps<'th'>) => (
+        <th {...props} style={mergeStyle({ border: '1px solid #e2e8f0', padding: '8px 12px', background: '#f8fafc', fontWeight: 600, textAlign: 'left' }, style)}>{children}</th>
     ),
-    td: ({ children }: { children: ReactNode }) => (
-        <td style={{ border: '1px solid #e2e8f0', padding: '8px 12px' }}>{children}</td>
+    td: ({ children, node, style, ...props }: MarkdownTagProps<'td'>) => (
+        <td {...props} style={mergeStyle({ border: '1px solid #e2e8f0', padding: '8px 12px' }, style)}>{children}</td>
     ),
-    hr: () => (
-        <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '16px 0' }} />
+    hr: ({ node, style, ...props }: MarkdownTagProps<'hr'>) => (
+        <hr {...props} style={mergeStyle({ border: 'none', borderTop: '1px solid #e2e8f0', margin: '16px 0' }, style)} />
     ),
-    strong: ({ children }: { children: ReactNode }) => (
-        <strong style={{ fontWeight: 600 }}>{children}</strong>
+    strong: ({ children, node, style, ...props }: MarkdownTagProps<'strong'>) => (
+        <strong {...props} style={mergeStyle({ fontWeight: 600 }, style)}>{children}</strong>
     ),
 };
 

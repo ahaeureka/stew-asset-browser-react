@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import React, { type CSSProperties, type ReactNode } from 'react';
 import type { AssetCollection, DownloadEntryResult, AssetTreeEntry, AssetVersionSummary, CreateDraftResult, PublishResult, SaveTextResult } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 export type WorkspaceTone = 'neutral' | 'success' | 'warning' | 'error';
 export interface StatusMessage {
@@ -83,5 +83,5 @@ export declare function pill(label: string, value: string): ReactNode;
 export declare function EmptyMessage({ title, message }: {
     title: string;
     message: string;
-}): import("react/jsx-runtime").JSX.Element;
+}): React.JSX.Element;
 export {};

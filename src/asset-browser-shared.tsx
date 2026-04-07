@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from 'react';
+import React, { type CSSProperties, type ReactNode } from 'react';
 import type {
     AssetCollection,
     DownloadEntryResult,
@@ -193,11 +193,13 @@ export function formatBytes(bytes: number): string {
 
 export function languageFor(entry: AssetTreeEntry | null, hint: string): string {
     const value = (hint || entry?.languageHint || entry?.contentType || '').toLowerCase();
+    const pathValue = (entry?.path || '').toLowerCase();
     if (value.includes('typescript')) return 'typescript';
     if (value.includes('javascript')) return 'javascript';
     if (value.includes('json')) return 'json';
     if (value.includes('yaml') || value.includes('yml')) return 'yaml';
     if (value.includes('toml')) return 'toml';
+    if (/\.(md|markdown|mdown|mkd|mkdn|mdx)$/.test(pathValue)) return 'markdown';
     if (value.includes('markdown')) return 'markdown';
     if (value.includes('html')) return 'html';
     if (value.includes('css')) return 'css';
