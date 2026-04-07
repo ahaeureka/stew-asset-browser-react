@@ -59,6 +59,7 @@ export interface AssetBrowserWorkspaceProps {
     client: AssetBrowserClient;
     assetSpace: string;
     assetId: string;
+    /** Business version ID to open first when the workspace is mounted. */
     initialVersionId?: string;
     initialFolder?: string;
     height?: number | string;
@@ -86,7 +87,7 @@ export function AssetBrowserWorkspace({
     assetId,
     initialVersionId,
     initialFolder = '/',
-    height = 780,
+    height = '100%',
     title,
     className,
     style,
@@ -287,14 +288,13 @@ export function AssetBrowserWorkspace({
             const nextCompareVersionId = nextCollection.activeVersionId && nextCollection.activeVersionId !== nextSelectedVersionId
                 ? nextCollection.activeVersionId
                 : '';
-            const nextStatus: StatusMessage = { tone: 'neutral', text: 'Workspace loaded' };
 
             startTransition(() => {
                 setCollection(nextCollection);
                 setVersions(versionResult.versions);
                 setSelectedVersionId(nextSelectedVersionId);
                 setCompareVersionId(nextCompareVersionId);
-                setStatus(nextStatus);
+                setStatus(null);
             });
 
             await callbacks?.onWorkspaceLoaded?.(createActionContext({
@@ -303,7 +303,7 @@ export function AssetBrowserWorkspace({
                 selectedVersionId: nextSelectedVersionId,
                 compareVersionId: nextCompareVersionId,
                 loading: false,
-                status: nextStatus,
+                status: null,
             }));
         } catch (error) {
             reportError(error);

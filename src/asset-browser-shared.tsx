@@ -30,7 +30,9 @@ export interface TreeNode {
 export interface AssetBrowserWorkspaceState {
     collection: AssetCollection | null;
     versions: AssetVersionSummary[];
+    /** Business version ID currently selected in the workspace. */
     selectedVersionId: string;
+    /** Business version ID selected as the diff baseline. */
     compareVersionId: string;
     selectedPath: string;
     hasDraft: boolean;
@@ -47,6 +49,7 @@ export interface AssetBrowserActionContext {
     compareVersion: AssetVersionSummary | null;
     selectedEntry: AssetTreeEntry | null;
     selectedPath: string;
+    /** Business version ID of the current draft, when present. */
     draftVersionId: string;
     dirty: boolean;
     loading: boolean;

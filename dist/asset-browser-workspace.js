@@ -6,7 +6,7 @@ import { AssetDiffViewer } from './asset-diff-viewer';
 import { AssetEditor } from './asset-editor';
 import { buildTree, buttonBaseStyle, cardHeaderStyle, collectInitialExpanded, languageFor, panelHandleStyle, pill, primaryButtonStyle, sectionStyle, selectStyle, shellStyle, toneStyle, toolbarStyle, } from './asset-browser-shared';
 import { AssetTree } from './asset-tree';
-export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVersionId, initialFolder = '/', height = 780, title, className, style, enableEditing = true, defaultDraftDescription = 'Edit assets', callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, }) {
+export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVersionId, initialFolder = '/', height = '100%', title, className, style, enableEditing = true, defaultDraftDescription = 'Edit assets', callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, }) {
     const [loading, setLoading] = useState(true);
     const [collection, setCollection] = useState(null);
     const [versions, setVersions] = useState([]);
@@ -167,13 +167,12 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             const nextCompareVersionId = nextCollection.activeVersionId && nextCollection.activeVersionId !== nextSelectedVersionId
                 ? nextCollection.activeVersionId
                 : '';
-            const nextStatus = { tone: 'neutral', text: 'Workspace loaded' };
             startTransition(() => {
                 setCollection(nextCollection);
                 setVersions(versionResult.versions);
                 setSelectedVersionId(nextSelectedVersionId);
                 setCompareVersionId(nextCompareVersionId);
-                setStatus(nextStatus);
+                setStatus(null);
             });
             await callbacks?.onWorkspaceLoaded?.(createActionContext({
                 collection: nextCollection,
@@ -181,7 +180,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                 selectedVersionId: nextSelectedVersionId,
                 compareVersionId: nextCompareVersionId,
                 loading: false,
-                status: nextStatus,
+                status: null,
             }));
         }
         catch (error) {

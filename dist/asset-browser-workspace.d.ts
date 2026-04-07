@@ -5,6 +5,7 @@ export interface AssetBrowserWorkspaceProps {
     client: AssetBrowserClient;
     assetSpace: string;
     assetId: string;
+    /** Business version ID to open first when the workspace is mounted. */
     initialVersionId?: string;
     initialFolder?: string;
     height?: number | string;

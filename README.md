@@ -160,13 +160,19 @@ async function handleExport() {
 | `assetSpace` | `string` | 是 | 无 | 资产空间 | `configs` |
 | `assetId` | `string` | 是 | 无 | 资产集合 ID | `my-app` |
 | `initialVersionId` | `string` | 否 | 自动选择草稿或活跃版本 | 首次挂载时优先打开的版本 | 用于从“版本历史列表”跳转进来 |
-| `initialFolder` | `string` | 否 | `/` | 初次加载目录树时的起始目录 | `/templates`、`/src` |
+| `initialFolder` | `string` | 否 | `/` | 初次加载目录树时的起始目录；传 `/` 时后端会返回整棵子树的平铺条目，组件会在前端重建目录树 | `/`、`/templates`、`/src` |
 | `height` | `number \| string` | 否 | `780` | 容器高度 | `820`、`"75vh"` |
 | `title` | `string` | 否 | 集合 displayName 或 `assetSpace/assetId` | 自定义标题 | `"路由规则编辑"` |
 | `className` | `string` | 否 | 无 | 外层容器 class | 接入业务样式系统时使用 |
 | `style` | `CSSProperties` | 否 | 无 | 外层容器内联样式 | 调整宽高、圆角、阴影 |
 | `enableEditing` | `boolean` | 否 | `true` | 是否允许草稿编辑 | 只读审阅页可传 `false` |
 | `defaultDraftDescription` | `string` | 否 | `Edit assets` | 点击“Create draft”时默认带上的说明 | `"审批后修改配置"` |
+
+### 版本 ID 语义
+
+- `initialVersionId`、`selectedVersionId`、`compareVersionId`、`draftVersionId`、`collection.activeVersionId` 都是业务版本号
+- 这些值对应后端的 `asset_versions.version_id`，不是数据库内部 UUID
+- 网关为了兼容旧调用，入参暂时仍接受 UUID，但 UI SDK 与新业务代码都应只保存和传递业务版本号
 
 ### assetSpace 和 assetId 怎么获取
 
@@ -475,6 +481,7 @@ return target ? (
 - `onBefore...` 返回 `false` 会中断后续动作。
 - 回调可以是异步函数。
 - `context` 里会带上当前 `assetSpace`、`assetId`、`selectedPath`、`draftVersionId`、`selectedVersion`、`showDiff` 等运行时信息。
+- `context` 中出现的所有版本相关字段也都是业务版本号。
 
 ### 回调示例 1：保存前做业务校验
 

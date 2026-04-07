@@ -24,7 +24,9 @@
         "@monaco-editor/react": "^4.7.0",
         "monaco-editor": "^0.55.1",
         "protobuf-typescript-client-gen": "workspace:*",
-        "react-resizable-panels": "^4.9.0"
+        "react-markdown": "^10.1.0",
+        "react-resizable-panels": "^4.9.0",
+        "remark-gfm": "^4.0.1"
     },
     "devDependencies": {
         "@types/react": "^19.1.12",
