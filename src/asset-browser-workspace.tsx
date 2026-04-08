@@ -530,7 +530,7 @@ export function AssetBrowserWorkspace({
                 if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
                     setDiffLeftText(targetEntry.oldPreview);
                     setDiffRightText(targetEntry.newPreview);
-                    setDiffLabel(`${diff.baseVersion.versionId} -> ${diff.draftVersion.versionId}`);
+                    setDiffLabel(`${versionDisplayLabel(diff.baseVersion)} -> ${versionDisplayLabel(diff.draftVersion)}`);
                     return;
                 }
 
@@ -554,7 +554,7 @@ export function AssetBrowserWorkspace({
                 }
                 setDiffLeftText(detail.leftText);
                 setDiffRightText(detail.rightText);
-                setDiffLabel(`${diff.baseVersion.versionId} -> ${diff.draftVersion.versionId}`);
+                setDiffLabel(`${versionDisplayLabel(diff.baseVersion)} -> ${versionDisplayLabel(diff.draftVersion)}`);
                 return;
             }
 
@@ -588,7 +588,7 @@ export function AssetBrowserWorkspace({
             if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
                 setDiffLeftText(targetEntry.oldPreview);
                 setDiffRightText(targetEntry.newPreview);
-                setDiffLabel(`${diff.leftVersion.versionId} -> ${diff.rightVersion.versionId}`);
+                setDiffLabel(`${versionDisplayLabel(diff.leftVersion)} -> ${versionDisplayLabel(diff.rightVersion)}`);
                 return;
             }
 
@@ -612,7 +612,7 @@ export function AssetBrowserWorkspace({
             }
             setDiffLeftText(detail.leftText);
             setDiffRightText(detail.rightText);
-            setDiffLabel(`${diff.leftVersion.versionId} -> ${diff.rightVersion.versionId}`);
+            setDiffLabel(`${versionDisplayLabel(diff.leftVersion)} -> ${versionDisplayLabel(diff.rightVersion)}`);
         } catch (error) {
             reportError(error);
         }
@@ -944,7 +944,7 @@ export function AssetBrowserWorkspace({
                         {pill('空间', assetSpace)}
                         {pill('资产', assetId)}
                         {pill('模式', isDraftSelected ? '草稿' : '只读')}
-                        {collection?.activeVersionId ? pill('生效版本', collection.activeVersionId) : null}
+                        {collection?.activeVersionId ? pill('生效版本', (() => { const v = versions.find(ver => ver.versionId === collection.activeVersionId); return v ? versionDisplayLabel(v) : collection.activeVersionId; })()) : null}
                     </>
                 )}
                 controls={(
@@ -955,7 +955,7 @@ export function AssetBrowserWorkspace({
                             <select value={selectedVersionId} onChange={(event) => setSelectedVersionId(event.target.value)} style={topbarSelectStyle}>
                                 {versions.map((version) => (
                                     <option key={version.versionId} value={version.versionId}>
-                                        {version.versionId} · {version.status}{version.isActive ? ' · active' : ''}{version.isDraft ? ' · draft' : ''}
+                                        {versionDisplayLabel(version)} · {version.status}{version.isActive ? ' · active' : ''}{version.isDraft ? ' · draft' : ''}
                                     </option>
                                 ))}
                             </select>
@@ -968,7 +968,7 @@ export function AssetBrowserWorkspace({
                                     .filter((version) => version.versionId !== selectedVersionId)
                                     .map((version) => (
                                         <option key={version.versionId} value={version.versionId}>
-                                            {version.versionId} · {version.status}
+                                            {versionDisplayLabel(version)} · {version.status}
                                         </option>
                                     ))}
                             </select>
@@ -1032,7 +1032,7 @@ export function AssetBrowserWorkspace({
                         </button>
                     </>
                 )}
-                sidebarCardTitle={selectedVersion?.versionId || '正在加载版本'}
+                sidebarCardTitle={selectedVersion ? versionDisplayLabel(selectedVersion) : '正在加载版本'}
                 sidebarCardBody={(
                     <>
                         <div>{versionDescription}</div>
@@ -1168,7 +1168,7 @@ export function AssetBrowserWorkspace({
                         actions={renderEditorActions ? renderEditorActions(actionContext) : null}
                     />
                 )}
-                compareNote={selectedCompareVersion ? `当前对比基线：${selectedCompareVersion.versionId}` : undefined}
+                compareNote={selectedCompareVersion ? `当前对比基线：${versionDisplayLabel(selectedCompareVersion)}` : undefined}
                 footer={renderFooter ? renderFooter(actionContext) : undefined}
             />
         );
@@ -1196,7 +1196,7 @@ export function AssetBrowserWorkspace({
                             {pill('Space', assetSpace)}
                             {pill('Asset', assetId)}
                             {pill('Mode', isDraftSelected ? 'Draft' : 'Read only')}
-                            {collection?.activeVersionId ? pill('Active', collection.activeVersionId) : null}
+                            {collection?.activeVersionId ? pill('Active', (() => { const v = versions.find(ver => ver.versionId === collection.activeVersionId); return v ? versionDisplayLabel(v) : collection.activeVersionId; })()) : null}
                         </div>
                     </div>
                     <div style={{ display: 'grid', gap: 12, justifyItems: 'end' }}>
@@ -1217,7 +1217,7 @@ export function AssetBrowserWorkspace({
                         <select value={selectedVersionId} onChange={(event) => setSelectedVersionId(event.target.value)} style={selectStyle}>
                             {versions.map((version) => (
                                 <option key={version.versionId} value={version.versionId}>
-                                    {version.versionId} · {version.status}{version.isActive ? ' · active' : ''}{version.isDraft ? ' · draft' : ''}
+                                    {versionDisplayLabel(version)} · {version.status}{version.isActive ? ' · active' : ''}{version.isDraft ? ' · draft' : ''}
                                 </option>
                             ))}
                         </select>
@@ -1231,7 +1231,7 @@ export function AssetBrowserWorkspace({
                                 .filter((version) => version.versionId !== selectedVersionId)
                                 .map((version) => (
                                     <option key={version.versionId} value={version.versionId}>
-                                        {version.versionId} · {version.status}
+                                        {versionDisplayLabel(version)} · {version.status}
                                     </option>
                                 ))}
                         </select>
@@ -1384,7 +1384,7 @@ export function AssetBrowserWorkspace({
 
                 {selectedCompareVersion ? (
                     <div style={{ padding: '10px 18px', borderTop: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))', fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)' }}>
-                        Comparing against {selectedCompareVersion.versionId} when diff mode is enabled.
+                        Comparing against {versionDisplayLabel(selectedCompareVersion)} when diff mode is enabled.
                     </div>
                 ) : null}
 
@@ -1439,6 +1439,10 @@ function formatWorkspaceTimestamp(value: string): string {
         dateStyle: 'medium',
         timeStyle: 'short',
     }).format(timestamp);
+}
+
+function versionDisplayLabel(version: AssetVersionSummary): string {
+    return version.displayVersion || version.versionId;
 }
 
 function DownloadIcon() {

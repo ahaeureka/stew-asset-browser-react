@@ -345,7 +345,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                 if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
                     setDiffLeftText(targetEntry.oldPreview);
                     setDiffRightText(targetEntry.newPreview);
-                    setDiffLabel(`${diff.baseVersion.versionId} -> ${diff.draftVersion.versionId}`);
+                    setDiffLabel(`${versionDisplayLabel(diff.baseVersion)} -> ${versionDisplayLabel(diff.draftVersion)}`);
                     return;
                 }
                 if (!targetEntry.diffDetailAvailable) {
@@ -360,7 +360,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                 }
                 setDiffLeftText(detail.leftText);
                 setDiffRightText(detail.rightText);
-                setDiffLabel(`${diff.baseVersion.versionId} -> ${diff.draftVersion.versionId}`);
+                setDiffLabel(`${versionDisplayLabel(diff.baseVersion)} -> ${versionDisplayLabel(diff.draftVersion)}`);
                 return;
             }
             if (!compareVersionId || compareVersionId === selectedVersionId) {
@@ -391,7 +391,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
                 setDiffLeftText(targetEntry.oldPreview);
                 setDiffRightText(targetEntry.newPreview);
-                setDiffLabel(`${diff.leftVersion.versionId} -> ${diff.rightVersion.versionId}`);
+                setDiffLabel(`${versionDisplayLabel(diff.leftVersion)} -> ${versionDisplayLabel(diff.rightVersion)}`);
                 return;
             }
             if (!targetEntry.diffDetailAvailable) {
@@ -406,7 +406,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             }
             setDiffLeftText(detail.leftText);
             setDiffRightText(detail.rightText);
-            setDiffLabel(`${diff.leftVersion.versionId} -> ${diff.rightVersion.versionId}`);
+            setDiffLabel(`${versionDisplayLabel(diff.leftVersion)} -> ${versionDisplayLabel(diff.rightVersion)}`);
         }
         catch (error) {
             reportError(error);
@@ -703,12 +703,12 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                 pill('空间', assetSpace),
                 pill('资产', assetId),
                 pill('模式', isDraftSelected ? '草稿' : '只读'),
-                collection?.activeVersionId ? pill('生效版本', collection.activeVersionId) : null)), controls: (React.createElement(React.Fragment, null,
+                collection?.activeVersionId ? pill('生效版本', (() => { const v = versions.find(ver => ver.versionId === collection.activeVersionId); return v ? versionDisplayLabel(v) : collection.activeVersionId; })()) : null)), controls: (React.createElement(React.Fragment, null,
                 renderToolbarStart ? renderToolbarStart(actionContext) : null,
                 React.createElement("label", { className: "stew-asset-workspace__console-control-group" },
                     React.createElement("span", { className: "stew-asset-workspace__console-control-label" }, "\u5F53\u524D\u7248\u672C"),
                     React.createElement("select", { value: selectedVersionId, onChange: (event) => setSelectedVersionId(event.target.value), style: topbarSelectStyle }, versions.map((version) => (React.createElement("option", { key: version.versionId, value: version.versionId },
-                        version.versionId,
+                        versionDisplayLabel(version),
                         " \u00B7 ",
                         version.status,
                         version.isActive ? ' · active' : '',
@@ -720,7 +720,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                         versions
                             .filter((version) => version.versionId !== selectedVersionId)
                             .map((version) => (React.createElement("option", { key: version.versionId, value: version.versionId },
-                            version.versionId,
+                            versionDisplayLabel(version),
                             " \u00B7 ",
                             version.status))))),
                 React.createElement("label", { className: "stew-asset-workspace__console-search-group" },
@@ -734,7 +734,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                 React.createElement("button", { type: "button", style: topbarButtonStyle, disabled: loading, onClick: () => void loadWorkspace() }, "\u5237\u65B0"),
                 renderToolbarEnd ? renderToolbarEnd(actionContext) : null)), status: status, sidebarTitle: "\u8D44\u6E90\u76EE\u5F55", sidebarSubtitle: treeQuery.trim() ? `筛选后 ${visibleTreeCount} 项` : `共 ${treeEntries.length} 项`, sidebarActions: (React.createElement(React.Fragment, null,
                 React.createElement("span", { className: "stew-asset-workspace__console-sidebar-pill" }, isDraftSelected ? '草稿视图' : '版本视图'),
-                React.createElement("button", { type: "button", style: topbarButtonStyle, disabled: !selectedVersionId || exporting, onClick: () => void handleExport('/') }, "\u5BFC\u51FA"))), sidebarCardTitle: selectedVersion?.versionId || '正在加载版本', sidebarCardBody: (React.createElement(React.Fragment, null,
+                React.createElement("button", { type: "button", style: topbarButtonStyle, disabled: !selectedVersionId || exporting, onClick: () => void handleExport('/') }, "\u5BFC\u51FA"))), sidebarCardTitle: selectedVersion ? versionDisplayLabel(selectedVersion) : '正在加载版本', sidebarCardBody: (React.createElement(React.Fragment, null,
                 React.createElement("div", null, versionDescription),
                 React.createElement("div", null, versionMeta))), sidebarContent: (React.createElement(AssetTree, { title: treeQuery.trim() ? '搜索结果' : '资源目录', nodes: filteredTreeNodes, expandedPaths: visibleExpandedPaths, selectedPath: selectedPath, loading: loading, compact: true, emptyTitle: treeQuery.trim() ? '未找到匹配资源' : '暂无资源', emptyMessage: treeQuery.trim() ? '请调整关键字，或清空搜索后查看完整目录树。' : '当前版本没有可浏览的资源条目。', onSelect: (path) => setSelectedPath(path), onToggle: (path) => {
                     setExpandedPaths((current) => {
@@ -774,7 +774,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                             },
                         }));
                     }
-                }, onSave: canEdit ? () => void handleSave() : undefined, onSelectTab: (path) => setSelectedPath(path), onCloseTab: closeEditorTab, actions: renderEditorActions ? renderEditorActions(actionContext) : null })), compareNote: selectedCompareVersion ? `当前对比基线：${selectedCompareVersion.versionId}` : undefined, footer: renderFooter ? renderFooter(actionContext) : undefined }));
+                }, onSave: canEdit ? () => void handleSave() : undefined, onSelectTab: (path) => setSelectedPath(path), onCloseTab: closeEditorTab, actions: renderEditorActions ? renderEditorActions(actionContext) : null })), compareNote: selectedCompareVersion ? `当前对比基线：${versionDisplayLabel(selectedCompareVersion)}` : undefined, footer: renderFooter ? renderFooter(actionContext) : undefined }));
     }
     return (React.createElement("section", { className: className, "data-stew-theme": theme, style: {
             ...shellStyle,
@@ -791,7 +791,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                         pill('Space', assetSpace),
                         pill('Asset', assetId),
                         pill('Mode', isDraftSelected ? 'Draft' : 'Read only'),
-                        collection?.activeVersionId ? pill('Active', collection.activeVersionId) : null)),
+                        collection?.activeVersionId ? pill('Active', (() => { const v = versions.find(ver => ver.versionId === collection.activeVersionId); return v ? versionDisplayLabel(v) : collection.activeVersionId; })()) : null)),
                 React.createElement("div", { style: { display: 'grid', gap: 12, justifyItems: 'end' } },
                     renderHeaderExtras ? renderHeaderExtras(actionContext) : null,
                     status ? (React.createElement("div", { style: { ...toneStyle(status.tone), borderRadius: 14, padding: '10px 12px', fontSize: 13, maxWidth: 320 } }, status.text)) : null)),
@@ -800,7 +800,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                 React.createElement("label", { style: { display: 'grid', gap: 6, minWidth: 210 } },
                     React.createElement("span", { style: { fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)', fontWeight: 600 } }, "Current version"),
                     React.createElement("select", { value: selectedVersionId, onChange: (event) => setSelectedVersionId(event.target.value), style: selectStyle }, versions.map((version) => (React.createElement("option", { key: version.versionId, value: version.versionId },
-                        version.versionId,
+                        versionDisplayLabel(version),
                         " \u00B7 ",
                         version.status,
                         version.isActive ? ' · active' : '',
@@ -812,7 +812,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                         versions
                             .filter((version) => version.versionId !== selectedVersionId)
                             .map((version) => (React.createElement("option", { key: version.versionId, value: version.versionId },
-                            version.versionId,
+                            versionDisplayLabel(version),
                             " \u00B7 ",
                             version.status))))),
                 React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' } },
@@ -874,7 +874,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                                 React.createElement(AssetDiffViewer, { label: diffLabel, language: editorLanguage, summary: diffSummary, entries: diffEntries, selectedPath: selectedPath, originalText: diffLeftText, modifiedText: diffRightText, editorTheme: resolvedEditorTheme, onSelectEntry: (path) => setSelectedPath(path), actions: renderDiffActions ? renderDiffActions(actionContext) : null }))))) : null)),
             selectedCompareVersion ? (React.createElement("div", { style: { padding: '10px 18px', borderTop: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))', fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)' } },
                 "Comparing against ",
-                selectedCompareVersion.versionId,
+                versionDisplayLabel(selectedCompareVersion),
                 " when diff mode is enabled.")) : null,
             renderFooter ? (React.createElement("div", { style: { padding: '12px 18px', borderTop: '1px solid var(--stew-ab-border, rgba(148,163,184,0.10))', background: 'var(--stew-ab-footer-bg, rgba(248,250,252,0.92))' } }, renderFooter(actionContext))) : null)));
 }
@@ -912,6 +912,9 @@ function formatWorkspaceTimestamp(value) {
         dateStyle: 'medium',
         timeStyle: 'short',
     }).format(timestamp);
+}
+function versionDisplayLabel(version) {
+    return version.displayVersion || version.versionId;
 }
 function DownloadIcon() {
     return (React.createElement("svg", { viewBox: "0 0 12 12", fill: "none" },
