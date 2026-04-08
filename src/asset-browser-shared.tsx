@@ -290,16 +290,43 @@ export function formatBytes(bytes: number): string {
 }
 
 export function needsLiteralUnescape(text: string): boolean {
-    if (!text.includes('\\n')) {
+    const escapedNewlines = (text.match(/\\n/g) ?? []).length;
+    const octalSequences = (text.match(/\\[0-3][0-7]{2}/g) ?? []).length;
+    const escapedQuotes = (text.match(/\\["']/g) ?? []).length;
+    if (escapedNewlines === 0 && octalSequences === 0 && escapedQuotes === 0) {
         return false;
     }
     const realNewlines = (text.match(/\n/g) ?? []).length;
-    const escapedNewlines = (text.match(/\\n/g) ?? []).length;
-    return escapedNewlines > 2 && realNewlines < escapedNewlines;
+    return (escapedNewlines > 2 && realNewlines < escapedNewlines)
+        || octalSequences > 2
+        || escapedQuotes > 2;
+}
+
+function decodeOctalEscapes(text: string): string {
+    return text.replace(
+        /(?:\\[0-3][0-7]{2})+/g,
+        (seq) => {
+            const bytes: number[] = [];
+            for (const m of seq.matchAll(/\\([0-3][0-7]{2})/g)) {
+                bytes.push(parseInt(m[1], 8));
+            }
+            try {
+                return new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(bytes));
+            } catch {
+                return seq;
+            }
+        },
+    );
 }
 
 export function unescapeLiteralNewlines(text: string): string {
-    return text.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+    return decodeOctalEscapes(text)
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\r/g, '\r')
+        .replace(/\\"/g, '"')
+        .replace(/\\'/g, "'")
+        .replace(/\\\\/g, '\\');
 }
 
 export function languageFor(entry: AssetTreeEntry | null, hint: string): string {

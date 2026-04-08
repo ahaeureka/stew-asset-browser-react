@@ -74,6 +74,7 @@ const FILE_METADATA: Record<string, { languageHint: string; contentType: string 
     '/assets/templates/launch-checklist.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/prompts/product-opportunity-eval.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/prompts/code-review-assistant.md': { languageHint: 'markdown', contentType: 'text/markdown' },
+    '/prompts/escaped-json-demo.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/references/review-checklist.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/tests/trigger-test-cases.yaml': { languageHint: 'yaml', contentType: 'application/yaml' },
 };
@@ -292,10 +293,38 @@ const CODE_REVIEW_PROMPT_FILE = [
     '```',
 ].join('\n');
 
+// Simulates text returned from a JSON response with embedded escape sequences:
+// \\n for newlines, \\\" for quotes, \\342\\200\\224 for em dash, etc.
+const ESCAPED_JSON_DEMO_FILE =
+    '---\\nname: product-opportunity-eval-business-model\\n'
+    + 'description: Evaluates product opportunities through a ten-question framework.\\n'
+    + 'metadata:\\n'
+    + '  pattern: pipeline\\n'
+    + '  category: domain-knowledge\\n'
+    + '  tags: [product-management, opportunity-assessment]\\n'
+    + '  version: \\\"1.1.0\\\"\\n'
+    + '  author: skillforge\\n'
+    + '---\\n'
+    + '\\n'
+    + '# Product Opportunity Evaluation\\n'
+    + '\\n'
+    + 'A pipeline methodology for systematically assessing product opportunities.\\n'
+    + '\\n'
+    + '### Common Mistakes to Avoid\\n'
+    + '\\n'
+    + '- **(Step 1)** Writing the MRD as a specification \\342\\200\\224 MRD should focus on the problem opportunity.\\n'
+    + '- **(Step 2)** Believing customer service costs are inevitable \\342\\200\\224 Product improvements can reduce support costs.\\n'
+    + '\\n'
+    + '### Linked Resources\\n'
+    + '\\n'
+    + '- **[template]** `{baseDir}/assets/atom_01_template.md` \\342\\200\\224 MRD template structure\\n'
+    + '- **[reference]** `{baseDir}/references/review-checklist.md` \\342\\200\\224 Complete review checklist\\n';
+
 const DRAFT_FILES: Record<string, string> = {
     ...BASELINE_FILES,
     '/prompts/product-opportunity-eval.md': FRONTMATTER_PROMPT_FILE,
     '/prompts/code-review-assistant.md': CODE_REVIEW_PROMPT_FILE,
+    '/prompts/escaped-json-demo.md': ESCAPED_JSON_DEMO_FILE,
     '/SKILL.md': [
         '# 资产工作台预览',
         '',
