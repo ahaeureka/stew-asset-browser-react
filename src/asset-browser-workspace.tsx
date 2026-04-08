@@ -1141,6 +1141,7 @@ export function AssetBrowserWorkspace({
                         compact
                         mode={activeEditorMode}
                         showModeSwitch={false}
+                        onOpenMarkdownPath={(path) => setSelectedPath(path)}
                         onChange={(value) => {
                             const nextDirty = value !== originalText;
                             setEditorText(value);
@@ -1329,6 +1330,7 @@ export function AssetBrowserWorkspace({
                                     saving={saving}
                                     entryRevision={entryRevision}
                                     openTabs={openTabs}
+                                    onOpenMarkdownPath={(path) => setSelectedPath(path)}
                                     onChange={(value) => {
                                         const nextDirty = value !== originalText;
                                         setEditorText(value);

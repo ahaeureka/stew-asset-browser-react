@@ -156,13 +156,15 @@ export function needsLiteralUnescape(text) {
     const escapedNewlines = (text.match(/\\n/g) ?? []).length;
     const octalSequences = (text.match(/\\[0-3][0-7]{2}/g) ?? []).length;
     const escapedQuotes = (text.match(/\\["']/g) ?? []).length;
-    if (escapedNewlines === 0 && octalSequences === 0 && escapedQuotes === 0) {
+    const escapedBackticks = (text.match(/\\`/g) ?? []).length;
+    if (escapedNewlines === 0 && octalSequences === 0 && escapedQuotes === 0 && escapedBackticks === 0) {
         return false;
     }
     const realNewlines = (text.match(/\n/g) ?? []).length;
     return (escapedNewlines > 2 && realNewlines < escapedNewlines)
         || octalSequences > 2
-        || escapedQuotes > 2;
+        || escapedQuotes > 2
+        || escapedBackticks > 1;
 }
 function decodeOctalEscapes(text) {
     return text.replace(/(?:\\[0-3][0-7]{2})+/g, (seq) => {
@@ -185,6 +187,7 @@ export function unescapeLiteralNewlines(text) {
         .replace(/\\r/g, '\r')
         .replace(/\\"/g, '"')
         .replace(/\\'/g, "'")
+        .replace(/\\`/g, '`')
         .replace(/\\\\/g, '\\');
 }
 export function languageFor(entry, hint) {

@@ -73,17 +73,19 @@ const previewNavStyle = {
     background: 'rgba(248,250,252,0.92)',
     boxShadow: '0 18px 50px rgba(15,23,42,0.05)',
 };
-const previewNavItemStyle = (depth) => ({
+const previewNavItemStyle = (depth, active = false) => ({
     appearance: 'none',
     border: 0,
-    background: 'transparent',
-    color: '#475569',
+    borderRadius: 10,
+    background: active ? 'rgba(14,165,233,0.10)' : 'transparent',
+    color: active ? '#0369a1' : '#475569',
     cursor: 'pointer',
     fontSize: 13,
+    fontWeight: active ? 700 : 500,
     lineHeight: 1.5,
     textAlign: 'left',
-    padding: '4px 0',
-    paddingLeft: Math.max(0, depth - 1) * 14,
+    padding: '4px 10px',
+    paddingLeft: 10 + Math.max(0, depth - 1) * 14,
 });
 const copyButtonStyle = {
     appearance: 'none',
@@ -222,6 +224,7 @@ function stripFrontmatter(markdown) {
 function buildMarkdownOutline(markdown, prefix) {
     const createId = createHeadingIdFactory(prefix);
     const items = [];
+    let order = 0;
     const lines = markdown.split(/\r?\n/);
     let startIndex = 0;
     if (/^---[ \t]*$/.test(lines[0] ?? '')) {
@@ -245,18 +248,22 @@ function buildMarkdownOutline(markdown, prefix) {
             text,
             id: createId(text),
             lineNumber: index + 1,
+            order: order++,
         });
     }
     return items;
 }
-function createHeadingRenderer(tag, baseStyle, createId, onNavigate) {
+function createHeadingRenderer(tag, baseStyle, createId, onNavigate, nextOrder, onRegisterHeading) {
     return ({ children, node, style, ...props }) => {
         const text = normalizeMarkdownText(extractPlainText(children));
         const id = createId(text || tag);
+        const order = nextOrder();
         return React.createElement(tag, {
             ...props,
             id,
-            style: mergeStyle(baseStyle, style),
+            'data-outline-order': order,
+            ref: (element) => onRegisterHeading?.(id, order, element),
+            style: mergeStyle({ ...baseStyle, scrollMarginTop: 24 }, style),
         }, React.createElement(React.Fragment, null,
             children,
             text ? (React.createElement("a", { href: `#${id}`, onClick: (event) => {
@@ -276,13 +283,67 @@ function inferCodeLanguage(className) {
     const match = /language-([\w-]+)/.exec(className || '');
     return match?.[1];
 }
-function createMarkdownComponents(prefix, onNavigate) {
+function normalizeAssetPath(path) {
+    if (!path) {
+        return '';
+    }
+    return path.startsWith('/') ? path : `/${path}`;
+}
+function stripAssetBasePrefix(path) {
+    return path
+        .replace(/^\{baseDir\}\//, '')
+        .replace(/^\$\{baseDir\}\//, '')
+        .replace(/^baseDir\//, '');
+}
+function startsFromWorkspaceRoot(path) {
+    return /^(assets|references|scripts|tests|prompts|examples|docs|config|src|proto)\//.test(path);
+}
+function resolveRelativeAssetPath(currentPath, href) {
+    if (!href || href.startsWith('#')) {
+        return '';
+    }
+    const withoutHash = stripAssetBasePrefix(href.split('#')[0] || '');
+    if (!withoutHash) {
+        return '';
+    }
+    if (/^[a-z][a-z\d+.-]*:/i.test(withoutHash) || withoutHash.startsWith('//')) {
+        return '';
+    }
+    if (withoutHash.startsWith('/')) {
+        return withoutHash;
+    }
+    if (startsFromWorkspaceRoot(withoutHash)) {
+        return `/${withoutHash}`;
+    }
+    const baseSegments = currentPath.split('/').filter(Boolean);
+    if (!currentPath.endsWith('/')) {
+        baseSegments.pop();
+    }
+    for (const segment of withoutHash.split('/')) {
+        if (!segment || segment === '.') {
+            continue;
+        }
+        if (segment === '..') {
+            baseSegments.pop();
+            continue;
+        }
+        baseSegments.push(segment);
+    }
+    return `/${baseSegments.join('/')}`;
+}
+function isInlineAssetReference(text) {
+    const normalized = stripAssetBasePrefix(text.trim());
+    return /^(?:\.?\.?\/)?[\w.-]+(?:\/[\w.-]+)+$/.test(normalized);
+}
+function createMarkdownComponents(prefix, onNavigate, currentPath, onOpenMarkdownPath, onRegisterHeading) {
     const createId = createHeadingIdFactory(prefix);
+    let headingOrder = 0;
+    const nextOrder = () => headingOrder++;
     return {
-        h1: createHeadingRenderer('h1', { fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate),
-        h2: createHeadingRenderer('h2', { fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate),
-        h3: createHeadingRenderer('h3', { fontSize: 18, fontWeight: 600, margin: '20px 0 8px 0' }, createId, onNavigate),
-        h4: createHeadingRenderer('h4', { fontSize: 16, fontWeight: 600, margin: '16px 0 8px 0' }, createId, onNavigate),
+        h1: createHeadingRenderer('h1', { fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate, nextOrder, onRegisterHeading),
+        h2: createHeadingRenderer('h2', { fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate, nextOrder, onRegisterHeading),
+        h3: createHeadingRenderer('h3', { fontSize: 18, fontWeight: 600, margin: '20px 0 8px 0' }, createId, onNavigate, nextOrder, onRegisterHeading),
+        h4: createHeadingRenderer('h4', { fontSize: 16, fontWeight: 600, margin: '16px 0 8px 0' }, createId, onNavigate, nextOrder, onRegisterHeading),
         p: ({ children, node, style, ...props }) => (React.createElement("p", { ...props, style: mergeStyle({ margin: '0 0 12px 0' }, style) }, children)),
         ul: ({ children, node, style, ...props }) => (React.createElement("ul", { ...props, style: mergeStyle({
                 margin: '0 0 16px 0',
@@ -315,11 +376,34 @@ function createMarkdownComponents(prefix, onNavigate) {
                         },
                     } }, text));
             }
+            const assetPath = onOpenMarkdownPath && isInlineAssetReference(text)
+                ? resolveRelativeAssetPath(currentPath, text)
+                : '';
+            if (assetPath) {
+                return (React.createElement("button", { type: "button", onClick: () => onOpenMarkdownPath?.(assetPath), style: mergeStyle({ padding: '2px 6px', borderRadius: 6, background: '#e2e8f0', fontFamily: monoFont, fontSize: 13, border: 0, color: '#0369a1', cursor: 'pointer' }, style) }, text));
+            }
             return (React.createElement("code", { ...props, className: className, style: mergeStyle({ padding: '2px 6px', borderRadius: 6, background: '#e2e8f0', fontFamily: monoFont, fontSize: 13 }, style) }, children));
         },
         pre: ({ children, node, style, ...props }) => (React.createElement(MarkdownCodeBlockFrame, { copySource: extractPlainText(children).replace(/\n$/, '') },
             React.createElement("pre", { ...props, style: mergeStyle({ margin: 0, overflow: 'auto', background: 'transparent', padding: 0 }, style) }, children))),
-        a: ({ children, node, href, style, ...props }) => (React.createElement("a", { ...props, href: href, target: "_blank", rel: "noopener noreferrer", style: mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style) }, children)),
+        a: ({ children, node, href, style, ...props }) => {
+            const nextHref = href || '';
+            const anchorId = nextHref.startsWith('#') ? nextHref.slice(1) : '';
+            const assetPath = onOpenMarkdownPath ? resolveRelativeAssetPath(currentPath, nextHref) : '';
+            if (anchorId) {
+                return (React.createElement("a", { ...props, href: nextHref, onClick: (event) => {
+                        event.preventDefault();
+                        onNavigate(anchorId);
+                    }, style: mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style) }, children));
+            }
+            if (assetPath) {
+                return (React.createElement("a", { ...props, href: assetPath, onClick: (event) => {
+                        event.preventDefault();
+                        onOpenMarkdownPath?.(assetPath);
+                    }, style: mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style) }, children));
+            }
+            return React.createElement("a", { ...props, href: href, target: "_blank", rel: "noopener noreferrer", style: mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style) }, children);
+        },
         table: ({ children, node, style, ...props }) => (React.createElement("div", { style: { margin: '0 0 18px 0', overflow: 'auto', borderRadius: 18, border: '1px solid rgba(148,163,184,0.16)' } },
             React.createElement("table", { ...props, style: mergeStyle({ borderCollapse: 'separate', borderSpacing: 0, width: '100%', background: '#ffffff' }, style) }, children))),
         thead: ({ children, node, style, ...props }) => (React.createElement("thead", { ...props, style: mergeStyle({ background: '#f8fafc' }, style) }, children)),
@@ -338,22 +422,130 @@ function createMarkdownComponents(prefix, onNavigate) {
         strong: ({ children, node, style, ...props }) => (React.createElement("strong", { ...props, style: mergeStyle({ fontWeight: 600 }, style) }, children)),
     };
 }
-export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme = 'vs', value, canEdit, dirty, saving = false, entryRevision, openTabs = [], onChange, onSave, onSelectTab, onCloseTab, actions, compact = false, mode, showModeSwitch = true, }) {
+export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme = 'vs', value, canEdit, dirty, saving = false, entryRevision, openTabs = [], onChange, onSave, onSelectTab, onCloseTab, onOpenMarkdownPath, actions, compact = false, mode, showModeSwitch = true, }) {
     const [internalMode, setInternalMode] = useState('edit');
     const [copied, setCopied] = useState(false);
+    const [outlineCollapsed, setOutlineCollapsed] = useState(false);
+    const [activeOutlineId, setActiveOutlineId] = useState('');
+    const [previewNavigationRequest, setPreviewNavigationRequest] = useState(null);
     const editorRef = useRef(null);
     const monacoRef = useRef(null);
+    const headingElementsRef = useRef(new Map());
+    const headingElementsByOrderRef = useRef(new Map());
     const latestSaveRef = useRef(onSave);
     const latestCanEditRef = useRef(canEdit);
     const latestSavingRef = useRef(saving);
     const latestMarkdownRef = useRef(false);
+    const previewScrollRef = useRef(null);
     const previewRootRef = useRef(null);
     const isMarkdown = language === 'markdown';
     const activeMode = mode ?? internalMode;
     const displayValue = useMemo(() => needsLiteralUnescape(value) ? unescapeLiteralNewlines(value) : value, [value]);
     const previewAnchorPrefix = useMemo(() => `preview-${slugifyHeading(selectedPath || 'markdown-preview') || 'markdown-preview'}`, [selectedPath]);
+    function findActiveOutlineItemByLine(lineNumber) {
+        let activeItem = null;
+        for (const item of markdownOutline) {
+            if (item.lineNumber <= lineNumber) {
+                activeItem = item;
+                continue;
+            }
+            break;
+        }
+        return activeItem ?? markdownOutline[0] ?? null;
+    }
+    function getPreviewHeadingScrollTop(target, container) {
+        let top = target.offsetTop;
+        let current = target.offsetParent;
+        while (current && current instanceof HTMLElement && current !== container) {
+            top += current.offsetTop;
+            current = current.offsetParent;
+        }
+        return top;
+    }
+    function syncActiveOutlineFromPreview() {
+        const container = previewScrollRef.current;
+        if (!container || markdownOutline.length === 0) {
+            setActiveOutlineId('');
+            return;
+        }
+        const threshold = container.scrollTop + 56;
+        let activeItem = markdownOutline[0] ?? null;
+        for (const item of markdownOutline) {
+            const target = findHeadingElement(item.id, item.order);
+            if (!target) {
+                continue;
+            }
+            const top = getPreviewHeadingScrollTop(target, container);
+            if (top <= threshold) {
+                activeItem = item;
+                continue;
+            }
+            break;
+        }
+        setActiveOutlineId(activeItem?.id ?? '');
+    }
+    function syncActiveOutlineFromEditorLine(lineNumber) {
+        const activeItem = findActiveOutlineItemByLine(lineNumber);
+        setActiveOutlineId(activeItem?.id ?? '');
+    }
+    function registerHeadingElement(id, order, element) {
+        if (element) {
+            headingElementsRef.current.set(id, element);
+            headingElementsByOrderRef.current.set(order, element);
+            return;
+        }
+        headingElementsRef.current.delete(id);
+        headingElementsByOrderRef.current.delete(order);
+    }
+    function findHeadingElement(id, order) {
+        const root = previewRootRef.current;
+        const renderedHeadings = Array.from(root?.querySelectorAll('h1, h2, h3, h4, h5, h6') ?? []);
+        const byRenderedOrder = order !== undefined ? renderedHeadings[order] ?? null : null;
+        if (byRenderedOrder) {
+            return byRenderedOrder;
+        }
+        const byDomOrder = order !== undefined
+            ? root?.querySelector(`[data-outline-order="${order}"]`) ?? null
+            : null;
+        if (byDomOrder) {
+            return byDomOrder;
+        }
+        const byOrder = order !== undefined ? headingElementsByOrderRef.current.get(order) ?? null : null;
+        if (byOrder) {
+            return byOrder;
+        }
+        const registered = headingElementsRef.current.get(id) ?? null;
+        if (registered) {
+            return registered;
+        }
+        return Array.from(root?.querySelectorAll('[id]') ?? []).find((element) => element.id === id) ?? null;
+    }
+    function scrollPreviewToHeading(item) {
+        const container = previewScrollRef.current;
+        const target = findHeadingElement(item.id, item.order);
+        if (!container || !target) {
+            return;
+        }
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const nextScrollTop = Math.max(0, container.scrollTop + (targetRect.top - containerRect.top) - 24);
+        target.style.transition = 'box-shadow 180ms ease, background-color 180ms ease';
+        target.style.backgroundColor = 'rgba(14,165,233,0.10)';
+        target.style.boxShadow = '0 0 0 3px rgba(14,165,233,0.16)';
+        setActiveOutlineId(item.id);
+        target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        container.scrollTo({ top: nextScrollTop, behavior: 'smooth' });
+        window.setTimeout(() => {
+            target.style.backgroundColor = '';
+            target.style.boxShadow = '';
+        }, 900);
+    }
     function scrollToAnchor(id) {
-        const target = previewRootRef.current?.querySelector(`#${id}`);
+        if (activeMode === 'preview') {
+            setPreviewNavigationRequest({ id, nonce: Date.now() });
+            return;
+        }
+        const target = findHeadingElement(id);
         target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     function scrollEditorToLine(lineNumber) {
@@ -372,9 +564,10 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
     }
     function navigateToOutlineItem(item) {
         if (activeMode === 'preview') {
-            scrollToAnchor(item.id);
+            setPreviewNavigationRequest({ id: item.id, nonce: Date.now() });
             return;
         }
+        setActiveOutlineId(item.id);
         scrollEditorToLine(item.lineNumber);
     }
     async function handleCopyAll() {
@@ -390,7 +583,7 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
     }, [isMarkdown, displayValue]);
     const markdownBody = useMemo(() => frontmatter ? frontmatter.body : displayValue, [frontmatter, displayValue]);
     const markdownOutline = useMemo(() => buildMarkdownOutline(displayValue, previewAnchorPrefix), [previewAnchorPrefix, displayValue]);
-    const markdownComponents = useMemo(() => createMarkdownComponents(previewAnchorPrefix, scrollToAnchor), [previewAnchorPrefix]);
+    const markdownComponents = useMemo(() => createMarkdownComponents(previewAnchorPrefix, scrollToAnchor, normalizeAssetPath(selectedPath), onOpenMarkdownPath, registerHeadingElement), [onOpenMarkdownPath, previewAnchorPrefix, selectedPath]);
     useEffect(() => {
         latestSaveRef.current = onSave;
         latestCanEditRef.current = canEdit;
@@ -401,7 +594,49 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
         if (mode === undefined) {
             setInternalMode('edit');
         }
-    }, [selectedPath]);
+        setOutlineCollapsed(false);
+        setActiveOutlineId(markdownOutline[0]?.id ?? '');
+    }, [markdownOutline, selectedPath]);
+    useEffect(() => {
+        if (activeMode !== 'preview' || !isMarkdown || markdownOutline.length === 0) {
+            return;
+        }
+        const container = previewScrollRef.current;
+        if (!container) {
+            return;
+        }
+        const handleScroll = () => {
+            syncActiveOutlineFromPreview();
+        };
+        handleScroll();
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [activeMode, isMarkdown, markdownOutline]);
+    useEffect(() => {
+        if (activeMode !== 'preview' || !previewNavigationRequest) {
+            return;
+        }
+        if (typeof document !== 'undefined') {
+            const active = document.activeElement;
+            if (active instanceof HTMLElement) {
+                active.blur();
+            }
+        }
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            const handle = window.requestAnimationFrame(() => {
+                const item = markdownOutline.find((entry) => entry.id === previewNavigationRequest.id);
+                if (item) {
+                    scrollPreviewToHeading(item);
+                }
+            });
+            return () => window.cancelAnimationFrame(handle);
+        }
+        const item = markdownOutline.find((entry) => entry.id === previewNavigationRequest.id);
+        if (item) {
+            scrollPreviewToHeading(item);
+        }
+        return undefined;
+    }, [activeMode, markdownOutline, previewNavigationRequest]);
     async function runEditorAction(actionId) {
         const editor = editorRef.current;
         if (!editor) {
@@ -433,6 +668,7 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
     const handleEditorMount = (editor, monaco) => {
         editorRef.current = editor;
         monacoRef.current = monaco;
+        syncActiveOutlineFromEditorLine(editor.getPosition()?.lineNumber ?? 1);
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
             void handleSaveRequest();
         });
@@ -442,6 +678,13 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
                     setInternalMode((current) => current === 'edit' ? 'preview' : 'edit');
                 }
             }
+        });
+        editor.onDidChangeCursorPosition((event) => {
+            syncActiveOutlineFromEditorLine(event.position.lineNumber);
+        });
+        editor.onDidScrollChange(() => {
+            const visibleLineNumber = editor.getVisibleRanges()?.[0]?.startLineNumber ?? editor.getPosition()?.lineNumber ?? 1;
+            syncActiveOutlineFromEditorLine(visibleLineNumber);
         });
     };
     const headerStyle = compact
@@ -468,6 +711,19 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
     const markdownLeadStyle = compact
         ? { ...previewLeadStyle, margin: '0 0 16px 0', fontSize: 12 }
         : previewLeadStyle;
+    function renderOutlineNav(options) {
+        return (React.createElement("nav", { style: {
+                ...markdownPreviewNavStyle,
+                maxWidth: options?.maxWidth ?? markdownPreviewNavStyle.maxWidth,
+                margin: options?.margin ?? markdownPreviewNavStyle.margin,
+                padding: options?.compactMode ? '12px 14px' : markdownPreviewNavStyle.padding,
+                borderRadius: options?.compactMode ? 16 : markdownPreviewNavStyle.borderRadius,
+            }, "aria-label": "Table of contents" },
+            React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: outlineCollapsed ? 0 : 10 } },
+                React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' } }, "\u6587\u6863\u76EE\u5F55"),
+                React.createElement("button", { type: "button", style: secondaryActionStyle(false), onClick: () => setOutlineCollapsed((current) => !current) }, outlineCollapsed ? '展开' : '折叠')),
+            !outlineCollapsed ? (React.createElement("div", { style: { display: 'grid', gap: 2, maxHeight: options?.compactMode ? 132 : undefined, overflow: options?.compactMode ? 'auto' : undefined } }, markdownOutline.map((item) => (React.createElement("button", { key: item.id, type: "button", style: previewNavItemStyle(item.depth, item.id === activeOutlineId), onClick: () => navigateToOutlineItem(item) }, item.text))))) : null));
+    }
     return (React.createElement("div", { style: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } },
         openTabs.length > 0 ? (React.createElement("div", { style: tabsStyle }, openTabs.map((tab) => (React.createElement("div", { key: tab.path, style: tabChipStyle(tab.active) },
             React.createElement("button", { type: "button", onClick: () => onSelectTab?.(tab.path), style: { appearance: 'none', border: 0, background: 'transparent', color: 'inherit', fontSize: 12, fontWeight: 600, cursor: 'pointer', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
@@ -494,17 +750,13 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
                     React.createElement("button", { type: "button", style: tabStyle(activeMode === 'preview'), onClick: () => setInternalMode('preview') }, "\u9884\u89C8"))) : null,
                 actions,
                 onSave ? (React.createElement("button", { type: "button", style: saveActionStyle, disabled: !canEdit || saving || !dirty, onClick: () => void handleSaveRequest() }, saving ? '保存中...' : '保存')) : null)),
-        activeMode === 'preview' && isMarkdown ? (React.createElement("div", { style: markdownPreviewContainerStyle },
-            markdownOutline.length > 0 ? (React.createElement("nav", { style: markdownPreviewNavStyle, "aria-label": "Table of contents" },
-                React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 } }, "\u6587\u6863\u76EE\u5F55"),
-                React.createElement("div", { style: { display: 'grid', gap: 2 } }, markdownOutline.map((item) => (React.createElement("button", { key: item.id, type: "button", style: previewNavItemStyle(item.depth), onClick: () => navigateToOutlineItem(item) }, item.text)))))) : null,
+        activeMode === 'preview' && isMarkdown ? (React.createElement("div", { ref: previewScrollRef, style: markdownPreviewContainerStyle },
+            markdownOutline.length > 0 ? renderOutlineNav() : null,
             React.createElement("article", { style: markdownPreviewDocumentStyle },
                 React.createElement("div", { ref: previewRootRef },
                     frontmatter && frontmatter.fields.length > 0 ? (React.createElement(FrontmatterBlock, { fields: frontmatter.fields })) : null,
                     React.createElement(Markdown, { remarkPlugins: [remarkGfm, remarkFrontmatter], components: markdownComponents }, markdownBody))))) : (React.createElement("div", { style: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 } },
-            isMarkdown && markdownOutline.length > 0 ? (React.createElement("nav", { style: { ...markdownPreviewNavStyle, maxWidth: 'none', margin: '12px 12px 0', padding: compact ? '12px 14px' : '14px 16px', borderRadius: compact ? 16 : 18 }, "aria-label": "Table of contents" },
-                React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 } }, "\u6587\u6863\u76EE\u5F55"),
-                React.createElement("div", { style: { display: 'grid', gap: 2, maxHeight: compact ? 132 : 160, overflow: 'auto' } }, markdownOutline.map((item) => (React.createElement("button", { key: item.id, type: "button", style: previewNavItemStyle(item.depth), onClick: () => navigateToOutlineItem(item) }, item.text)))))) : null,
+            isMarkdown && markdownOutline.length > 0 ? (renderOutlineNav({ compactMode: true, maxWidth: 'none', margin: '12px 12px 0' })) : null,
             React.createElement("div", { style: { flex: 1, minHeight: 0 } }, !selectedEntry ? (React.createElement(EmptyMessage, { title: "\u5C1A\u672A\u9009\u62E9\u6587\u4EF6", message: "\u8BF7\u5148\u4ECE\u5DE6\u4FA7\u76EE\u5F55\u6811\u9009\u62E9\u4E00\u4E2A\u6587\u4EF6\uFF0C\u518D\u8FDB\u884C\u67E5\u770B\u6216\u7F16\u8F91\u3002" })) : selectedEntry.entryKind !== 'file' ? (React.createElement(EmptyMessage, { title: "\u5F53\u524D\u4E3A\u76EE\u5F55", message: "\u8BF7\u9009\u62E9\u6587\u4EF6\u8282\u70B9\u540E\u518D\u6253\u5F00\u7F16\u8F91\u533A\u3002" })) : !selectedEntry.isTextPreviewable ? (React.createElement(EmptyMessage, { title: "\u4E8C\u8FDB\u5236\u6587\u4EF6", message: "\u5F53\u524D\u8D44\u6E90\u4E0D\u652F\u6301\u6587\u672C\u9884\u89C8\u3002" })) : (React.createElement(Editor, { height: "100%", defaultLanguage: "plaintext", path: modelPath, language: language, theme: editorTheme, value: displayValue, onMount: handleEditorMount, onChange: (next) => onChange(next ?? ''), saveViewState: true, keepCurrentModel: true, options: {
                     readOnly: !canEdit,
                     minimap: { enabled: false },

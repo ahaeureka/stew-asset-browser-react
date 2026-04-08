@@ -70,13 +70,19 @@ const BACKEND_RESPONSE_PREVIEW_PATH = '/prompts/backend-response-preview.md';
 
 const FILE_METADATA: Record<string, { languageHint: string; contentType: string }> = {
     '/SKILL.md': { languageHint: 'markdown', contentType: 'text/markdown' },
+    '/assets/atom_01_example.md': { languageHint: 'markdown', contentType: 'text/markdown' },
+    '/assets/atom_01_template.md': { languageHint: 'markdown', contentType: 'text/markdown' },
+    '/assets/atom_02_example.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/assets/atom_02_template.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/assets/templates/onboarding.yaml': { languageHint: 'yaml', contentType: 'application/yaml' },
     '/assets/templates/launch-checklist.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/prompts/product-opportunity-eval.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/prompts/code-review-assistant.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     [BACKEND_RESPONSE_PREVIEW_PATH]: { languageHint: 'markdown', contentType: 'text/markdown' },
+    '/references/ten-question-framework.md': { languageHint: 'markdown', contentType: 'text/markdown' },
+    '/references/quality-checklist.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/references/review-checklist.md': { languageHint: 'markdown', contentType: 'text/markdown' },
+    '/scripts/validate.py': { languageHint: 'python', contentType: 'text/x-python' },
     '/tests/trigger-test-cases.yaml': { languageHint: 'yaml', contentType: 'application/yaml' },
 };
 
@@ -308,9 +314,73 @@ const BACKEND_RESPONSE_SAMPLE = {
 
 const DRAFT_FILES: Record<string, string> = {
     ...BASELINE_FILES,
+    '/assets/atom_01_example.md': [
+        '# Registration Funnel Optimization',
+        '',
+        '## Problem',
+        '',
+        'Users drop during phone verification and onboarding completion is below target.',
+        '',
+        '## Opportunity Hypothesis',
+        '',
+        '- Reduce friction in OTP delivery',
+        '- Add clearer recovery paths',
+        '- Improve progress feedback during signup',
+    ].join('\n'),
+    '/assets/atom_01_template.md': [
+        '# MRD and Financial Analysis Template',
+        '',
+        '## Opportunity Section',
+        '',
+        '1. Problem statement',
+        '2. Target user',
+        '3. Market size',
+        '',
+        '## Financial Section',
+        '',
+        '1. Revenue model',
+        '2. Cost model',
+        '3. ROI estimate',
+    ].join('\n'),
+    '/assets/atom_02_example.md': [
+        '# System Integrator Requirements',
+        '',
+        '## Context',
+        '',
+        'This worked example evaluates an opportunity distributed through system integrators.',
+        '',
+        '## Key Considerations',
+        '',
+        '- Extensibility requirements for partner customization',
+        '- Revenue sharing and incentive alignment',
+        '- Channel conflict and ownership boundaries',
+        '- Integration complexity on delivery timelines',
+    ].join('\n'),
     '/prompts/product-opportunity-eval.md': FRONTMATTER_PROMPT_FILE,
     '/prompts/code-review-assistant.md': CODE_REVIEW_PROMPT_FILE,
     [BACKEND_RESPONSE_PREVIEW_PATH]: BACKEND_RESPONSE_SAMPLE.text,
+    '/references/ten-question-framework.md': [
+        '# Ten Question Framework',
+        '',
+        '1. What problem does the product solve?',
+        '2. For whom is the problem most painful?',
+        '3. How large is the opportunity?',
+        '4. How will success be measured?',
+        '5. What competitors already address it?',
+        '6. Why are we positioned to win?',
+        '7. Why is timing right now?',
+        '8. What is the go-to-market path?',
+        '9. What dependencies must hold?',
+        '10. Should we proceed or stop?',
+    ].join('\n'),
+    '/references/quality-checklist.md': [
+        '# Pipeline Quality Checklist',
+        '',
+        '- Confirm prerequisites are available',
+        '- Validate linked resources are reachable',
+        '- Ensure assumptions are clearly labeled',
+        '- Verify output format matches pipeline contract',
+    ].join('\n'),
     '/SKILL.md': [
         '# 资产工作台预览',
         '',
@@ -383,6 +453,15 @@ const DRAFT_FILES: Record<string, string> = {
         '2. Validate directory nodes are typed correctly.',
         '3. Verify export action only appears when usable.',
         '4. Confirm diff viewer selects changed files.',
+    ].join('\n'),
+    '/scripts/validate.py': [
+        'def validate_pipeline_inputs(payload: dict) -> list[str]:',
+        '    errors: list[str] = []',
+        '    if not payload.get("name"):',
+        '        errors.append("missing name")',
+        '    if not payload.get("steps"):',
+        '        errors.append("missing steps")',
+        '    return errors',
     ].join('\n'),
 };
 
@@ -809,6 +888,7 @@ function PreviewApp() {
                             compact
                             mode={workspaceView === 'preview' ? 'preview' : 'edit'}
                             showModeSwitch={false}
+                            onOpenMarkdownPath={(path) => setSelectedPath(path)}
                             onChange={(value) => {
                                 if (!selectedEntry || selectedEntry.entryKind !== 'file') {
                                     return;

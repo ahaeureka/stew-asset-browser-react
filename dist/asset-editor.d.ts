@@ -24,10 +24,11 @@ export interface AssetEditorProps {
     onSave?: () => Promise<void> | void;
     onSelectTab?: (path: string) => void;
     onCloseTab?: (path: string) => void;
+    onOpenMarkdownPath?: (path: string) => void;
     actions?: ReactNode;
     compact?: boolean;
     mode?: AssetEditorMode;
     showModeSwitch?: boolean;
 }
-export declare function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme, value, canEdit, dirty, saving, entryRevision, openTabs, onChange, onSave, onSelectTab, onCloseTab, actions, compact, mode, showModeSwitch, }: AssetEditorProps): React.JSX.Element;
+export declare function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme, value, canEdit, dirty, saving, entryRevision, openTabs, onChange, onSave, onSelectTab, onCloseTab, onOpenMarkdownPath, actions, compact, mode, showModeSwitch, }: AssetEditorProps): React.JSX.Element;
 export {};

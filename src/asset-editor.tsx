@@ -34,6 +34,7 @@ interface MarkdownOutlineItem {
     text: string;
     id: string;
     lineNumber: number;
+    order: number;
 }
 
 const tabStyle = (active: boolean): React.CSSProperties => ({
@@ -109,17 +110,19 @@ const previewNavStyle: React.CSSProperties = {
     boxShadow: '0 18px 50px rgba(15,23,42,0.05)',
 };
 
-const previewNavItemStyle = (depth: number): React.CSSProperties => ({
+const previewNavItemStyle = (depth: number, active = false): React.CSSProperties => ({
     appearance: 'none',
     border: 0,
-    background: 'transparent',
-    color: '#475569',
+    borderRadius: 10,
+    background: active ? 'rgba(14,165,233,0.10)' : 'transparent',
+    color: active ? '#0369a1' : '#475569',
     cursor: 'pointer',
     fontSize: 13,
+    fontWeight: active ? 700 : 500,
     lineHeight: 1.5,
     textAlign: 'left',
-    padding: '4px 0',
-    paddingLeft: Math.max(0, depth - 1) * 14,
+    padding: '4px 10px',
+    paddingLeft: 10 + Math.max(0, depth - 1) * 14,
 });
 
 const copyButtonStyle: React.CSSProperties = {
@@ -302,6 +305,7 @@ function stripFrontmatter(markdown: string): string {
 function buildMarkdownOutline(markdown: string, prefix: string): MarkdownOutlineItem[] {
     const createId = createHeadingIdFactory(prefix);
     const items: MarkdownOutlineItem[] = [];
+    let order = 0;
     const lines = markdown.split(/\r?\n/);
     let startIndex = 0;
 
@@ -329,6 +333,7 @@ function buildMarkdownOutline(markdown: string, prefix: string): MarkdownOutline
             text,
             id: createId(text),
             lineNumber: index + 1,
+            order: order++,
         });
     }
 
@@ -340,17 +345,22 @@ function createHeadingRenderer<Tag extends 'h1' | 'h2' | 'h3' | 'h4'>(
     baseStyle: React.CSSProperties,
     createId: (text: string) => string,
     onNavigate: (id: string) => void,
+    nextOrder: () => number,
+    onRegisterHeading?: (id: string, order: number, element: HTMLElement | null) => void,
 ) {
     return ({ children, node, style, ...props }: MarkdownTagProps<Tag>) => {
         const text = normalizeMarkdownText(extractPlainText(children));
         const id = createId(text || tag);
+        const order = nextOrder();
 
         return React.createElement(
             tag,
             {
                 ...props,
                 id,
-                style: mergeStyle(baseStyle, style),
+                'data-outline-order': order,
+                ref: (element: HTMLElement | null) => onRegisterHeading?.(id, order, element),
+                style: mergeStyle({ ...baseStyle, scrollMarginTop: 24 }, style),
             },
             <>
                 {children}
@@ -385,14 +395,83 @@ function inferCodeLanguage(className?: string): string | undefined {
     return match?.[1];
 }
 
-function createMarkdownComponents(prefix: string, onNavigate: (id: string) => void): Components {
+function normalizeAssetPath(path: string): string {
+    if (!path) {
+        return '';
+    }
+    return path.startsWith('/') ? path : `/${path}`;
+}
+
+function stripAssetBasePrefix(path: string): string {
+    return path
+        .replace(/^\{baseDir\}\//, '')
+        .replace(/^\$\{baseDir\}\//, '')
+        .replace(/^baseDir\//, '');
+}
+
+function startsFromWorkspaceRoot(path: string): boolean {
+    return /^(assets|references|scripts|tests|prompts|examples|docs|config|src|proto)\//.test(path);
+}
+
+function resolveRelativeAssetPath(currentPath: string, href: string): string {
+    if (!href || href.startsWith('#')) {
+        return '';
+    }
+
+    const withoutHash = stripAssetBasePrefix(href.split('#')[0] || '');
+    if (!withoutHash) {
+        return '';
+    }
+    if (/^[a-z][a-z\d+.-]*:/i.test(withoutHash) || withoutHash.startsWith('//')) {
+        return '';
+    }
+    if (withoutHash.startsWith('/')) {
+        return withoutHash;
+    }
+    if (startsFromWorkspaceRoot(withoutHash)) {
+        return `/${withoutHash}`;
+    }
+
+    const baseSegments = currentPath.split('/').filter(Boolean);
+    if (!currentPath.endsWith('/')) {
+        baseSegments.pop();
+    }
+
+    for (const segment of withoutHash.split('/')) {
+        if (!segment || segment === '.') {
+            continue;
+        }
+        if (segment === '..') {
+            baseSegments.pop();
+            continue;
+        }
+        baseSegments.push(segment);
+    }
+
+    return `/${baseSegments.join('/')}`;
+}
+
+function isInlineAssetReference(text: string): boolean {
+    const normalized = stripAssetBasePrefix(text.trim());
+    return /^(?:\.?\.?\/)?[\w.-]+(?:\/[\w.-]+)+$/.test(normalized);
+}
+
+function createMarkdownComponents(
+    prefix: string,
+    onNavigate: (id: string) => void,
+    currentPath: string,
+    onOpenMarkdownPath?: (path: string) => void,
+    onRegisterHeading?: (id: string, order: number, element: HTMLElement | null) => void,
+): Components {
     const createId = createHeadingIdFactory(prefix);
+    let headingOrder = 0;
+    const nextOrder = () => headingOrder++;
 
     return {
-        h1: createHeadingRenderer('h1', { fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate),
-        h2: createHeadingRenderer('h2', { fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate),
-        h3: createHeadingRenderer('h3', { fontSize: 18, fontWeight: 600, margin: '20px 0 8px 0' }, createId, onNavigate),
-        h4: createHeadingRenderer('h4', { fontSize: 16, fontWeight: 600, margin: '16px 0 8px 0' }, createId, onNavigate),
+        h1: createHeadingRenderer('h1', { fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate, nextOrder, onRegisterHeading),
+        h2: createHeadingRenderer('h2', { fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate, nextOrder, onRegisterHeading),
+        h3: createHeadingRenderer('h3', { fontSize: 18, fontWeight: 600, margin: '20px 0 8px 0' }, createId, onNavigate, nextOrder, onRegisterHeading),
+        h4: createHeadingRenderer('h4', { fontSize: 16, fontWeight: 600, margin: '16px 0 8px 0' }, createId, onNavigate, nextOrder, onRegisterHeading),
         p: ({ children, node, style, ...props }: MarkdownTagProps<'p'>) => (
             <p {...props} style={mergeStyle({ margin: '0 0 12px 0' }, style)}>{children}</p>
         ),
@@ -461,6 +540,22 @@ function createMarkdownComponents(prefix: string, onNavigate: (id: string) => vo
                     </SyntaxHighlighter>
                 );
             }
+
+            const assetPath = onOpenMarkdownPath && isInlineAssetReference(text)
+                ? resolveRelativeAssetPath(currentPath, text)
+                : '';
+            if (assetPath) {
+                return (
+                    <button
+                        type="button"
+                        onClick={() => onOpenMarkdownPath?.(assetPath)}
+                        style={mergeStyle({ padding: '2px 6px', borderRadius: 6, background: '#e2e8f0', fontFamily: monoFont, fontSize: 13, border: 0, color: '#0369a1', cursor: 'pointer' }, style)}
+                    >
+                        {text}
+                    </button>
+                );
+            }
+
             return (
                 <code
                     {...props}
@@ -476,9 +571,45 @@ function createMarkdownComponents(prefix: string, onNavigate: (id: string) => vo
                 <pre {...props} style={mergeStyle({ margin: 0, overflow: 'auto', background: 'transparent', padding: 0 }, style)}>{children}</pre>
             </MarkdownCodeBlockFrame>
         ),
-        a: ({ children, node, href, style, ...props }: MarkdownTagProps<'a'>) => (
-            <a {...props} href={href} target="_blank" rel="noopener noreferrer" style={mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style)}>{children}</a>
-        ),
+        a: ({ children, node, href, style, ...props }: MarkdownTagProps<'a'>) => {
+            const nextHref = href || '';
+            const anchorId = nextHref.startsWith('#') ? nextHref.slice(1) : '';
+            const assetPath = onOpenMarkdownPath ? resolveRelativeAssetPath(currentPath, nextHref) : '';
+
+            if (anchorId) {
+                return (
+                    <a
+                        {...props}
+                        href={nextHref}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            onNavigate(anchorId);
+                        }}
+                        style={mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style)}
+                    >
+                        {children}
+                    </a>
+                );
+            }
+
+            if (assetPath) {
+                return (
+                    <a
+                        {...props}
+                        href={assetPath}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            onOpenMarkdownPath?.(assetPath);
+                        }}
+                        style={mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style)}
+                    >
+                        {children}
+                    </a>
+                );
+            }
+
+            return <a {...props} href={href} target="_blank" rel="noopener noreferrer" style={mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style)}>{children}</a>;
+        },
         table: ({ children, node, style, ...props }: MarkdownTagProps<'table'>) => (
             <div style={{ margin: '0 0 18px 0', overflow: 'auto', borderRadius: 18, border: '1px solid rgba(148,163,184,0.16)' }}>
                 <table {...props} style={mergeStyle({ borderCollapse: 'separate', borderSpacing: 0, width: '100%', background: '#ffffff' }, style)}>{children}</table>
@@ -542,6 +673,7 @@ export interface AssetEditorProps {
     onSave?: () => Promise<void> | void;
     onSelectTab?: (path: string) => void;
     onCloseTab?: (path: string) => void;
+    onOpenMarkdownPath?: (path: string) => void;
     actions?: ReactNode;
     compact?: boolean;
     mode?: AssetEditorMode;
@@ -564,6 +696,7 @@ export function AssetEditor({
     onSave,
     onSelectTab,
     onCloseTab,
+    onOpenMarkdownPath,
     actions,
     compact = false,
     mode,
@@ -571,12 +704,18 @@ export function AssetEditor({
 }: AssetEditorProps) {
     const [internalMode, setInternalMode] = useState<EditorMode>('edit');
     const [copied, setCopied] = useState(false);
+    const [outlineCollapsed, setOutlineCollapsed] = useState(false);
+    const [activeOutlineId, setActiveOutlineId] = useState<string>('');
+    const [previewNavigationRequest, setPreviewNavigationRequest] = useState<{ id: string; nonce: number } | null>(null);
     const editorRef = useRef<Parameters<NonNullable<OnMount>>[0] | null>(null);
     const monacoRef = useRef<Monaco | null>(null);
+    const headingElementsRef = useRef<Map<string, HTMLElement>>(new Map());
+    const headingElementsByOrderRef = useRef<Map<number, HTMLElement>>(new Map());
     const latestSaveRef = useRef(onSave);
     const latestCanEditRef = useRef(canEdit);
     const latestSavingRef = useRef(saving);
     const latestMarkdownRef = useRef(false);
+    const previewScrollRef = useRef<HTMLDivElement | null>(null);
     const previewRootRef = useRef<HTMLDivElement | null>(null);
     const isMarkdown = language === 'markdown';
     const activeMode = mode ?? internalMode;
@@ -591,8 +730,128 @@ export function AssetEditor({
         [selectedPath],
     );
 
+    function findActiveOutlineItemByLine(lineNumber: number): MarkdownOutlineItem | null {
+        let activeItem: MarkdownOutlineItem | null = null;
+        for (const item of markdownOutline) {
+            if (item.lineNumber <= lineNumber) {
+                activeItem = item;
+                continue;
+            }
+            break;
+        }
+        return activeItem ?? markdownOutline[0] ?? null;
+    }
+
+    function getPreviewHeadingScrollTop(target: HTMLElement, container: HTMLElement): number {
+        let top = target.offsetTop;
+        let current = target.offsetParent;
+        while (current && current instanceof HTMLElement && current !== container) {
+            top += current.offsetTop;
+            current = current.offsetParent;
+        }
+        return top;
+    }
+
+    function syncActiveOutlineFromPreview() {
+        const container = previewScrollRef.current;
+        if (!container || markdownOutline.length === 0) {
+            setActiveOutlineId('');
+            return;
+        }
+
+        const threshold = container.scrollTop + 56;
+        let activeItem = markdownOutline[0] ?? null;
+        for (const item of markdownOutline) {
+            const target = findHeadingElement(item.id, item.order);
+            if (!target) {
+                continue;
+            }
+            const top = getPreviewHeadingScrollTop(target, container);
+            if (top <= threshold) {
+                activeItem = item;
+                continue;
+            }
+            break;
+        }
+
+        setActiveOutlineId(activeItem?.id ?? '');
+    }
+
+    function syncActiveOutlineFromEditorLine(lineNumber: number) {
+        const activeItem = findActiveOutlineItemByLine(lineNumber);
+        setActiveOutlineId(activeItem?.id ?? '');
+    }
+
+    function registerHeadingElement(id: string, order: number, element: HTMLElement | null) {
+        if (element) {
+            headingElementsRef.current.set(id, element);
+            headingElementsByOrderRef.current.set(order, element);
+            return;
+        }
+        headingElementsRef.current.delete(id);
+        headingElementsByOrderRef.current.delete(order);
+    }
+
+    function findHeadingElement(id: string, order?: number): HTMLElement | null {
+        const root = previewRootRef.current;
+        const renderedHeadings = Array.from(root?.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6') ?? []);
+        const byRenderedOrder = order !== undefined ? renderedHeadings[order] ?? null : null;
+        if (byRenderedOrder) {
+            return byRenderedOrder;
+        }
+
+        const byDomOrder = order !== undefined
+            ? root?.querySelector<HTMLElement>(`[data-outline-order="${order}"]`) ?? null
+            : null;
+        if (byDomOrder) {
+            return byDomOrder;
+        }
+
+        const byOrder = order !== undefined ? headingElementsByOrderRef.current.get(order) ?? null : null;
+        if (byOrder) {
+            return byOrder;
+        }
+
+        const registered = headingElementsRef.current.get(id) ?? null;
+        if (registered) {
+            return registered;
+        }
+
+        return Array.from(root?.querySelectorAll<HTMLElement>('[id]') ?? []).find((element) => element.id === id) ?? null;
+    }
+
+    function scrollPreviewToHeading(item: Pick<MarkdownOutlineItem, 'id' | 'order' | 'text'>) {
+        const container = previewScrollRef.current;
+        const target = findHeadingElement(item.id, item.order);
+        if (!container || !target) {
+            return;
+        }
+
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const nextScrollTop = Math.max(0, container.scrollTop + (targetRect.top - containerRect.top) - 24);
+
+        target.style.transition = 'box-shadow 180ms ease, background-color 180ms ease';
+        target.style.backgroundColor = 'rgba(14,165,233,0.10)';
+        target.style.boxShadow = '0 0 0 3px rgba(14,165,233,0.16)';
+        setActiveOutlineId(item.id);
+
+        target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        container.scrollTo({ top: nextScrollTop, behavior: 'smooth' });
+
+        window.setTimeout(() => {
+            target.style.backgroundColor = '';
+            target.style.boxShadow = '';
+        }, 900);
+    }
+
     function scrollToAnchor(id: string) {
-        const target = previewRootRef.current?.querySelector<HTMLElement>(`#${id}`);
+        if (activeMode === 'preview') {
+            setPreviewNavigationRequest({ id, nonce: Date.now() });
+            return;
+        }
+
+        const target = findHeadingElement(id);
         target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -615,10 +874,11 @@ export function AssetEditor({
 
     function navigateToOutlineItem(item: MarkdownOutlineItem) {
         if (activeMode === 'preview') {
-            scrollToAnchor(item.id);
+            setPreviewNavigationRequest({ id: item.id, nonce: Date.now() });
             return;
         }
 
+        setActiveOutlineId(item.id);
         scrollEditorToLine(item.lineNumber);
     }
 
@@ -645,8 +905,8 @@ export function AssetEditor({
         [previewAnchorPrefix, displayValue],
     );
     const markdownComponents = useMemo(
-        () => createMarkdownComponents(previewAnchorPrefix, scrollToAnchor),
-        [previewAnchorPrefix],
+        () => createMarkdownComponents(previewAnchorPrefix, scrollToAnchor, normalizeAssetPath(selectedPath), onOpenMarkdownPath, registerHeadingElement),
+        [onOpenMarkdownPath, previewAnchorPrefix, selectedPath],
     );
 
     useEffect(() => {
@@ -660,7 +920,57 @@ export function AssetEditor({
         if (mode === undefined) {
             setInternalMode('edit');
         }
-    }, [selectedPath]);
+        setOutlineCollapsed(false);
+        setActiveOutlineId(markdownOutline[0]?.id ?? '');
+    }, [markdownOutline, selectedPath]);
+
+    useEffect(() => {
+        if (activeMode !== 'preview' || !isMarkdown || markdownOutline.length === 0) {
+            return;
+        }
+
+        const container = previewScrollRef.current;
+        if (!container) {
+            return;
+        }
+
+        const handleScroll = () => {
+            syncActiveOutlineFromPreview();
+        };
+
+        handleScroll();
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [activeMode, isMarkdown, markdownOutline]);
+
+    useEffect(() => {
+        if (activeMode !== 'preview' || !previewNavigationRequest) {
+            return;
+        }
+
+        if (typeof document !== 'undefined') {
+            const active = document.activeElement;
+            if (active instanceof HTMLElement) {
+                active.blur();
+            }
+        }
+
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            const handle = window.requestAnimationFrame(() => {
+                const item = markdownOutline.find((entry) => entry.id === previewNavigationRequest.id);
+                if (item) {
+                    scrollPreviewToHeading(item);
+                }
+            });
+            return () => window.cancelAnimationFrame(handle);
+        }
+
+        const item = markdownOutline.find((entry) => entry.id === previewNavigationRequest.id);
+        if (item) {
+            scrollPreviewToHeading(item);
+        }
+        return undefined;
+    }, [activeMode, markdownOutline, previewNavigationRequest]);
 
     async function runEditorAction(actionId: string) {
         const editor = editorRef.current;
@@ -697,6 +1007,7 @@ export function AssetEditor({
     const handleEditorMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
         monacoRef.current = monaco;
+        syncActiveOutlineFromEditorLine(editor.getPosition()?.lineNumber ?? 1);
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
             void handleSaveRequest();
         });
@@ -706,6 +1017,13 @@ export function AssetEditor({
                     setInternalMode((current) => current === 'edit' ? 'preview' : 'edit');
                 }
             }
+        });
+        editor.onDidChangeCursorPosition((event) => {
+            syncActiveOutlineFromEditorLine(event.position.lineNumber);
+        });
+        editor.onDidScrollChange(() => {
+            const visibleLineNumber = editor.getVisibleRanges()?.[0]?.startLineNumber ?? editor.getPosition()?.lineNumber ?? 1;
+            syncActiveOutlineFromEditorLine(visibleLineNumber);
         });
     };
 
@@ -733,6 +1051,44 @@ export function AssetEditor({
     const markdownLeadStyle: React.CSSProperties = compact
         ? { ...previewLeadStyle, margin: '0 0 16px 0', fontSize: 12 }
         : previewLeadStyle;
+
+    function renderOutlineNav(options?: { compactMode?: boolean; maxWidth?: string | number; margin?: string }) {
+        return (
+            <nav
+                style={{
+                    ...markdownPreviewNavStyle,
+                    maxWidth: options?.maxWidth ?? markdownPreviewNavStyle.maxWidth,
+                    margin: options?.margin ?? markdownPreviewNavStyle.margin,
+                    padding: options?.compactMode ? '12px 14px' : markdownPreviewNavStyle.padding,
+                    borderRadius: options?.compactMode ? 16 : markdownPreviewNavStyle.borderRadius,
+                }}
+                aria-label="Table of contents"
+            >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: outlineCollapsed ? 0 : 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        文档目录
+                    </div>
+                    <button type="button" style={secondaryActionStyle(false)} onClick={() => setOutlineCollapsed((current) => !current)}>
+                        {outlineCollapsed ? '展开' : '折叠'}
+                    </button>
+                </div>
+                {!outlineCollapsed ? (
+                    <div style={{ display: 'grid', gap: 2, maxHeight: options?.compactMode ? 132 : undefined, overflow: options?.compactMode ? 'auto' : undefined }}>
+                        {markdownOutline.map((item) => (
+                            <button
+                                key={item.id}
+                                type="button"
+                                style={previewNavItemStyle(item.depth, item.id === activeOutlineId)}
+                                onClick={() => navigateToOutlineItem(item)}
+                            >
+                                {item.text}
+                            </button>
+                        ))}
+                    </div>
+                ) : null}
+            </nav>
+        );
+    }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -798,26 +1154,8 @@ export function AssetEditor({
                 </div>
             </div>
             {activeMode === 'preview' && isMarkdown ? (
-                <div style={markdownPreviewContainerStyle}>
-                    {markdownOutline.length > 0 ? (
-                        <nav style={markdownPreviewNavStyle} aria-label="Table of contents">
-                            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-                                文档目录
-                            </div>
-                            <div style={{ display: 'grid', gap: 2 }}>
-                                {markdownOutline.map((item) => (
-                                    <button
-                                        key={item.id}
-                                        type="button"
-                                        style={previewNavItemStyle(item.depth)}
-                                        onClick={() => navigateToOutlineItem(item)}
-                                    >
-                                        {item.text}
-                                    </button>
-                                ))}
-                            </div>
-                        </nav>
-                    ) : null}
+                <div ref={previewScrollRef} style={markdownPreviewContainerStyle}>
+                    {markdownOutline.length > 0 ? renderOutlineNav() : null}
                     <article style={markdownPreviewDocumentStyle}>
                         <div ref={previewRootRef}>
                             {frontmatter && frontmatter.fields.length > 0 ? (
@@ -832,65 +1170,49 @@ export function AssetEditor({
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                     {isMarkdown && markdownOutline.length > 0 ? (
-                        <nav style={{ ...markdownPreviewNavStyle, maxWidth: 'none', margin: '12px 12px 0', padding: compact ? '12px 14px' : '14px 16px', borderRadius: compact ? 16 : 18 }} aria-label="Table of contents">
-                            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-                                文档目录
-                            </div>
-                            <div style={{ display: 'grid', gap: 2, maxHeight: compact ? 132 : 160, overflow: 'auto' }}>
-                                {markdownOutline.map((item) => (
-                                    <button
-                                        key={item.id}
-                                        type="button"
-                                        style={previewNavItemStyle(item.depth)}
-                                        onClick={() => navigateToOutlineItem(item)}
-                                    >
-                                        {item.text}
-                                    </button>
-                                ))}
-                            </div>
-                        </nav>
+                        renderOutlineNav({ compactMode: true, maxWidth: 'none', margin: '12px 12px 0' })
                     ) : null}
                     <div style={{ flex: 1, minHeight: 0 }}>
-                    {!selectedEntry ? (
-                        <EmptyMessage title="尚未选择文件" message="请先从左侧目录树选择一个文件，再进行查看或编辑。" />
-                    ) : selectedEntry.entryKind !== 'file' ? (
-                        <EmptyMessage title="当前为目录" message="请选择文件节点后再打开编辑区。" />
-                    ) : !selectedEntry.isTextPreviewable ? (
-                        <EmptyMessage title="二进制文件" message="当前资源不支持文本预览。" />
-                    ) : (
-                        <Editor
-                            height="100%"
-                            defaultLanguage="plaintext"
-                            path={modelPath}
-                            language={language}
-                            theme={editorTheme}
-                            value={displayValue}
-                            onMount={handleEditorMount}
-                            onChange={(next) => onChange(next ?? '')}
-                            saveViewState
-                            keepCurrentModel
-                            options={{
-                                readOnly: !canEdit,
-                                minimap: { enabled: false },
-                                smoothScrolling: true,
-                                fontSize: compact ? 12 : 13,
-                                fontFamily: monoFont,
-                                wordWrap: 'on',
-                                automaticLayout: true,
-                                formatOnPaste: canEdit,
-                                formatOnType: canEdit,
-                                scrollBeyondLastLine: false,
-                                contextmenu: true,
-                                padding: compact ? { top: 10, bottom: 14 } : { top: 16, bottom: 24 },
-                                guides: { indentation: true },
-                                find: {
-                                    addExtraSpaceOnTop: false,
-                                    autoFindInSelection: 'multiline',
-                                    seedSearchStringFromSelection: 'selection',
-                                },
-                            }}
-                        />
-                    )}
+                        {!selectedEntry ? (
+                            <EmptyMessage title="尚未选择文件" message="请先从左侧目录树选择一个文件，再进行查看或编辑。" />
+                        ) : selectedEntry.entryKind !== 'file' ? (
+                            <EmptyMessage title="当前为目录" message="请选择文件节点后再打开编辑区。" />
+                        ) : !selectedEntry.isTextPreviewable ? (
+                            <EmptyMessage title="二进制文件" message="当前资源不支持文本预览。" />
+                        ) : (
+                            <Editor
+                                height="100%"
+                                defaultLanguage="plaintext"
+                                path={modelPath}
+                                language={language}
+                                theme={editorTheme}
+                                value={displayValue}
+                                onMount={handleEditorMount}
+                                onChange={(next) => onChange(next ?? '')}
+                                saveViewState
+                                keepCurrentModel
+                                options={{
+                                    readOnly: !canEdit,
+                                    minimap: { enabled: false },
+                                    smoothScrolling: true,
+                                    fontSize: compact ? 12 : 13,
+                                    fontFamily: monoFont,
+                                    wordWrap: 'on',
+                                    automaticLayout: true,
+                                    formatOnPaste: canEdit,
+                                    formatOnType: canEdit,
+                                    scrollBeyondLastLine: false,
+                                    contextmenu: true,
+                                    padding: compact ? { top: 10, bottom: 14 } : { top: 16, bottom: 24 },
+                                    guides: { indentation: true },
+                                    find: {
+                                        addExtraSpaceOnTop: false,
+                                        autoFindInSelection: 'multiline',
+                                        seedSearchStringFromSelection: 'selection',
+                                    },
+                                }}
+                            />
+                        )}
                     </div>
                 </div>
             )}
