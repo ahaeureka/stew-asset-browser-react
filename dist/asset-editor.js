@@ -222,8 +222,16 @@ function stripFrontmatter(markdown) {
 function buildMarkdownOutline(markdown, prefix) {
     const createId = createHeadingIdFactory(prefix);
     const items = [];
-    const content = stripFrontmatter(markdown);
-    for (const line of content.split(/\r?\n/)) {
+    const lines = markdown.split(/\r?\n/);
+    let startIndex = 0;
+    if (/^---[ \t]*$/.test(lines[0] ?? '')) {
+        const endIndex = lines.findIndex((line, index) => index > 0 && /^---[ \t]*$/.test(line.trim()));
+        if (endIndex > 0) {
+            startIndex = endIndex + 1;
+        }
+    }
+    for (let index = startIndex; index < lines.length; index += 1) {
+        const line = lines[index] ?? '';
         const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line.trim());
         if (!match) {
             continue;
@@ -236,6 +244,7 @@ function buildMarkdownOutline(markdown, prefix) {
             depth: match[1]?.length ?? 1,
             text,
             id: createId(text),
+            lineNumber: index + 1,
         });
     }
     return items;
@@ -333,6 +342,7 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
     const [internalMode, setInternalMode] = useState('edit');
     const [copied, setCopied] = useState(false);
     const editorRef = useRef(null);
+    const monacoRef = useRef(null);
     const latestSaveRef = useRef(onSave);
     const latestCanEditRef = useRef(canEdit);
     const latestSavingRef = useRef(saving);
@@ -345,6 +355,27 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
     function scrollToAnchor(id) {
         const target = previewRootRef.current?.querySelector(`#${id}`);
         target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    function scrollEditorToLine(lineNumber) {
+        const editor = editorRef.current;
+        const monaco = monacoRef.current;
+        const model = editor?.getModel();
+        if (!editor || !monaco || !model) {
+            return;
+        }
+        const safeLineNumber = Math.min(Math.max(lineNumber, 1), model.getLineCount());
+        const maxColumn = model.getLineMaxColumn(safeLineNumber);
+        const range = new monaco.Range(safeLineNumber, 1, safeLineNumber, maxColumn);
+        editor.focus();
+        editor.setSelection(range);
+        editor.revealRangeInCenter(range);
+    }
+    function navigateToOutlineItem(item) {
+        if (activeMode === 'preview') {
+            scrollToAnchor(item.id);
+            return;
+        }
+        scrollEditorToLine(item.lineNumber);
     }
     async function handleCopyAll() {
         await copyText(displayValue);
@@ -401,6 +432,7 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
     }
     const handleEditorMount = (editor, monaco) => {
         editorRef.current = editor;
+        monacoRef.current = monaco;
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
             void handleSaveRequest();
         });
@@ -465,29 +497,32 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
         activeMode === 'preview' && isMarkdown ? (React.createElement("div", { style: markdownPreviewContainerStyle },
             markdownOutline.length > 0 ? (React.createElement("nav", { style: markdownPreviewNavStyle, "aria-label": "Table of contents" },
                 React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 } }, "\u6587\u6863\u76EE\u5F55"),
-                React.createElement("div", { style: { display: 'grid', gap: 2 } }, markdownOutline.map((item) => (React.createElement("button", { key: item.id, type: "button", style: previewNavItemStyle(item.depth), onClick: () => scrollToAnchor(item.id) }, item.text)))))) : null,
+                React.createElement("div", { style: { display: 'grid', gap: 2 } }, markdownOutline.map((item) => (React.createElement("button", { key: item.id, type: "button", style: previewNavItemStyle(item.depth), onClick: () => navigateToOutlineItem(item) }, item.text)))))) : null,
             React.createElement("article", { style: markdownPreviewDocumentStyle },
-                React.createElement("div", { style: markdownLeadStyle }, "\u9605\u8BFB\u89C6\u56FE \u00B7 GitHub Flavored Markdown \u00B7 \u4F7F\u7528 react-markdown \u6E32\u67D3"),
                 React.createElement("div", { ref: previewRootRef },
                     frontmatter && frontmatter.fields.length > 0 ? (React.createElement(FrontmatterBlock, { fields: frontmatter.fields })) : null,
-                    React.createElement(Markdown, { remarkPlugins: [remarkGfm, remarkFrontmatter], components: markdownComponents }, markdownBody))))) : (React.createElement("div", { style: { flex: 1, minHeight: 0 } }, !selectedEntry ? (React.createElement(EmptyMessage, { title: "\u5C1A\u672A\u9009\u62E9\u6587\u4EF6", message: "\u8BF7\u5148\u4ECE\u5DE6\u4FA7\u76EE\u5F55\u6811\u9009\u62E9\u4E00\u4E2A\u6587\u4EF6\uFF0C\u518D\u8FDB\u884C\u67E5\u770B\u6216\u7F16\u8F91\u3002" })) : selectedEntry.entryKind !== 'file' ? (React.createElement(EmptyMessage, { title: "\u5F53\u524D\u4E3A\u76EE\u5F55", message: "\u8BF7\u9009\u62E9\u6587\u4EF6\u8282\u70B9\u540E\u518D\u6253\u5F00\u7F16\u8F91\u533A\u3002" })) : !selectedEntry.isTextPreviewable ? (React.createElement(EmptyMessage, { title: "\u4E8C\u8FDB\u5236\u6587\u4EF6", message: "\u5F53\u524D\u8D44\u6E90\u4E0D\u652F\u6301\u6587\u672C\u9884\u89C8\u3002" })) : (React.createElement(Editor, { height: "100%", defaultLanguage: "plaintext", path: modelPath, language: language, theme: editorTheme, value: displayValue, onMount: handleEditorMount, onChange: (next) => onChange(next ?? ''), saveViewState: true, keepCurrentModel: true, options: {
-                readOnly: !canEdit,
-                minimap: { enabled: false },
-                smoothScrolling: true,
-                fontSize: compact ? 12 : 13,
-                fontFamily: monoFont,
-                wordWrap: 'on',
-                automaticLayout: true,
-                formatOnPaste: canEdit,
-                formatOnType: canEdit,
-                scrollBeyondLastLine: false,
-                contextmenu: true,
-                padding: compact ? { top: 10, bottom: 14 } : { top: 16, bottom: 24 },
-                guides: { indentation: true },
-                find: {
-                    addExtraSpaceOnTop: false,
-                    autoFindInSelection: 'multiline',
-                    seedSearchStringFromSelection: 'selection',
-                },
-            } }))))));
+                    React.createElement(Markdown, { remarkPlugins: [remarkGfm, remarkFrontmatter], components: markdownComponents }, markdownBody))))) : (React.createElement("div", { style: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 } },
+            isMarkdown && markdownOutline.length > 0 ? (React.createElement("nav", { style: { ...markdownPreviewNavStyle, maxWidth: 'none', margin: '12px 12px 0', padding: compact ? '12px 14px' : '14px 16px', borderRadius: compact ? 16 : 18 }, "aria-label": "Table of contents" },
+                React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 } }, "\u6587\u6863\u76EE\u5F55"),
+                React.createElement("div", { style: { display: 'grid', gap: 2, maxHeight: compact ? 132 : 160, overflow: 'auto' } }, markdownOutline.map((item) => (React.createElement("button", { key: item.id, type: "button", style: previewNavItemStyle(item.depth), onClick: () => navigateToOutlineItem(item) }, item.text)))))) : null,
+            React.createElement("div", { style: { flex: 1, minHeight: 0 } }, !selectedEntry ? (React.createElement(EmptyMessage, { title: "\u5C1A\u672A\u9009\u62E9\u6587\u4EF6", message: "\u8BF7\u5148\u4ECE\u5DE6\u4FA7\u76EE\u5F55\u6811\u9009\u62E9\u4E00\u4E2A\u6587\u4EF6\uFF0C\u518D\u8FDB\u884C\u67E5\u770B\u6216\u7F16\u8F91\u3002" })) : selectedEntry.entryKind !== 'file' ? (React.createElement(EmptyMessage, { title: "\u5F53\u524D\u4E3A\u76EE\u5F55", message: "\u8BF7\u9009\u62E9\u6587\u4EF6\u8282\u70B9\u540E\u518D\u6253\u5F00\u7F16\u8F91\u533A\u3002" })) : !selectedEntry.isTextPreviewable ? (React.createElement(EmptyMessage, { title: "\u4E8C\u8FDB\u5236\u6587\u4EF6", message: "\u5F53\u524D\u8D44\u6E90\u4E0D\u652F\u6301\u6587\u672C\u9884\u89C8\u3002" })) : (React.createElement(Editor, { height: "100%", defaultLanguage: "plaintext", path: modelPath, language: language, theme: editorTheme, value: displayValue, onMount: handleEditorMount, onChange: (next) => onChange(next ?? ''), saveViewState: true, keepCurrentModel: true, options: {
+                    readOnly: !canEdit,
+                    minimap: { enabled: false },
+                    smoothScrolling: true,
+                    fontSize: compact ? 12 : 13,
+                    fontFamily: monoFont,
+                    wordWrap: 'on',
+                    automaticLayout: true,
+                    formatOnPaste: canEdit,
+                    formatOnType: canEdit,
+                    scrollBeyondLastLine: false,
+                    contextmenu: true,
+                    padding: compact ? { top: 10, bottom: 14 } : { top: 16, bottom: 24 },
+                    guides: { indentation: true },
+                    find: {
+                        addExtraSpaceOnTop: false,
+                        autoFindInSelection: 'multiline',
+                        seedSearchStringFromSelection: 'selection',
+                    },
+                } })))))));
 }

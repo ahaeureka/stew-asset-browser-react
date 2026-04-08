@@ -66,6 +66,7 @@ type WorkspaceView = 'edit' | 'preview' | 'diff';
 const ASSET_SPACE = 'configs';
 const ASSET_ID = 'gateway-routing';
 const AUTHOR = 'preview.bot';
+const BACKEND_RESPONSE_PREVIEW_PATH = '/prompts/backend-response-preview.md';
 
 const FILE_METADATA: Record<string, { languageHint: string; contentType: string }> = {
     '/SKILL.md': { languageHint: 'markdown', contentType: 'text/markdown' },
@@ -74,7 +75,7 @@ const FILE_METADATA: Record<string, { languageHint: string; contentType: string 
     '/assets/templates/launch-checklist.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/prompts/product-opportunity-eval.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/prompts/code-review-assistant.md': { languageHint: 'markdown', contentType: 'text/markdown' },
-    '/prompts/escaped-json-demo.md': { languageHint: 'markdown', contentType: 'text/markdown' },
+    [BACKEND_RESPONSE_PREVIEW_PATH]: { languageHint: 'markdown', contentType: 'text/markdown' },
     '/references/review-checklist.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/tests/trigger-test-cases.yaml': { languageHint: 'yaml', contentType: 'application/yaml' },
 };
@@ -293,38 +294,23 @@ const CODE_REVIEW_PROMPT_FILE = [
     '```',
 ].join('\n');
 
-// Simulates text returned from a JSON response with embedded escape sequences:
-// \\n for newlines, \\\" for quotes, \\342\\200\\224 for em dash, etc.
-const ESCAPED_JSON_DEMO_FILE =
-    '---\\nname: product-opportunity-eval-business-model\\n'
-    + 'description: Evaluates product opportunities through a ten-question framework.\\n'
-    + 'metadata:\\n'
-    + '  pattern: pipeline\\n'
-    + '  category: domain-knowledge\\n'
-    + '  tags: [product-management, opportunity-assessment]\\n'
-    + '  version: \\\"1.1.0\\\"\\n'
-    + '  author: skillforge\\n'
-    + '---\\n'
-    + '\\n'
-    + '# Product Opportunity Evaluation\\n'
-    + '\\n'
-    + 'A pipeline methodology for systematically assessing product opportunities.\\n'
-    + '\\n'
-    + '### Common Mistakes to Avoid\\n'
-    + '\\n'
-    + '- **(Step 1)** Writing the MRD as a specification \\342\\200\\224 MRD should focus on the problem opportunity.\\n'
-    + '- **(Step 2)** Believing customer service costs are inevitable \\342\\200\\224 Product improvements can reduce support costs.\\n'
-    + '\\n'
-    + '### Linked Resources\\n'
-    + '\\n'
-    + '- **[template]** `{baseDir}/assets/atom_01_template.md` \\342\\200\\224 MRD template structure\\n'
-    + '- **[reference]** `{baseDir}/references/review-checklist.md` \\342\\200\\224 Complete review checklist\\n';
+const BACKEND_RESPONSE_SAMPLE = {
+    checksum: '5fc24410c6313727711575463317455c10db5e3ec5edab997949824bb4bf6a67',
+    contentType: 'text/markdown',
+    entryRevision: 1,
+    languageHint: 'markdown',
+    lossy: false,
+    sizeBytes: 8109,
+    truncated: false,
+    versionId: 'v20260407161615',
+    text: String.raw`---\nname: product-opportunity-eval-business-model\ndescription: Evaluates product opportunities through a ten-question framework and validates business models via financial analysis to confirm ROI. Use when assessing new product ideas for elimination or selection, and before committing development resources to validate investment worthiness. Use when reviewing product concepts prior to MRD approval or investment committee decisions. Do NOT use for detailed technical architecture design, post-launch performance monitoring, or pure marketing campaign planning.\nmetadata:\n  pattern: pipeline\n  category: domain-knowledge\n  tags: [product-management, opportunity-assessment, business-model, roi-analysis]\n  version: \"1.1.0\"\n  author: skillforge\n  license: MIT\n  compatibility: claude-3.5+\n---\n\n# Product Opportunity Evaluation and Business Model Validation\n\nA pipeline methodology for systematically assessing product opportunities through a ten-question framework and validating business models via financial analysis to ensure investment viability before development.\n\n### Context\n\nYou are executing a **two-stage pipeline** to evaluate **$ARGUMENTS**.\n\nIf the user provides files (documents, data, research), read them first. Use web search to gather additional context if needed.\n\n### Domain Context\n\nThis methodology aligns with Product Opportunity Assessment frameworks found in modern product management literature. It emphasizes the separation of problem space (opportunity) and solution space (specification), and the integration of financial viability (ROI) before engineering investment.\n\n**Key principles**:\n- MRD must describe the problem opportunity only, not specific solutions\n- Do not skip the MRD and start development directly\n- Financial stakeholder collaboration is required for business model validation\n\n### Prerequisites\n\n- Access to market data or customer research (if available)\n- Access to financial data repositories or stakeholder input (for Step 2)\n- Clear product idea or opportunity description from user\n\n### Instructions\n\nExecute this pipeline in strict sequence. Complete each step before proceeding to the next.\n\n#### Step 1: Evaluate Product Opportunity (MRD Generation)\n\n**Input**: User\'s product idea description, any provided market research or customer data\n\n**Action**: Draft a Market Requirements Document (MRD) that systematically answers the ten key questions from \`{baseDir}/references/ten-question-framework.md\`:\n\n1. What problem does the product solve?\n2. For whom (target users)?\n3. How big is the opportunity (market size)?\n4. How to measure success (metrics)?\n5. What are the competitors?\n6. Why are we suited (competitive advantage)?\n7. Is timing right (market readiness)?\n8. Go-to-market strategy?\n9. Necessary conditions (dependencies)?\n10. Conclusion (continue/abandon recommendation)\n\n**Output Format**: Structured MRD document with clear section headers for each question\n\n> **Checkpoint 1**: Verify MRD completeness\n> - [ ] All 10 questions answered\n> - [ ] MRD describes problem opportunity only (no solution specifics)\n> - [ ] Each answer includes supporting evidence or is marked \`[ASSUMPTION]\`\n>\n> If **all checks pass**, proceed to Step 2.\n> If **any check fails**:\n> - List what specific data or evidence is missing\n> - List assumptions that were made without verification\n> - Produce a **\"Gaps & Research Needed\"** section with concrete next actions\n> - Mark uncertain conclusions with \`[ASSUMPTION]\` and proceed to Step 2 with available information\n\n#### Step 2: Validate Business Model (Financial Analysis)\n\n**Input**: Completed MRD from Step 1, financial data or stakeholder input\n\n**Action**: Identify and engage financial stakeholders or access financial data repositories to analyze business model viability. Integrate data, interpret information, and forecast returns.\n\n**Required Financial Inputs** (gather what\'s available):\n- Revenue model (subscription, one-time, freemium, etc.)\n- Cost structure (development, operations, marketing)\n- Expected customer acquisition cost (CAC)\n- Expected lifetime value (LTV)\n- Break-even timeline\n- Investment required\n\n**Output Format**: Financial Analysis Report with:\n- Revenue projections (12-36 months)\n- Cost projections (12-36 months)\n- ROI calculation\n- Risk assessment\n\n> **Checkpoint 2**: Verify financial analysis completeness\n> - [ ] Revenue model clearly defined\n> - [ ] Cost structure documented\n> - [ ] ROI calculated or estimated\n> - [ ] All figures supported by data or marked \`[ASSUMPTION]\`\n>\n> If **all checks pass**, proceed to Final Output.\n> If **any check fails**:\n> - Document specific financial data gaps\n> - Provide range estimates where precise figures unavailable\n> - Mark all uncertain conclusions with \`[ASSUMPTION]\`\n\n#### Step 3: Generate Validation Report\n\n**Input**: Completed MRD (Step 1) + Financial Analysis Report (Step 2)\n\n**Action**: Apply the review checklist from \`{baseDir}/references/review-checklist.md\` and produce a consolidated validation report.\n\n**Output Format**: Create a **\"Validation Report\"** table with the following columns:\n\n| Checklist Item | Status (Pass/Fail) | Evidence/Notes | Severity | Correction Required |\n|---|---|---|---|---|\n| [Item from checklist] | Pass/Fail | Supporting evidence or gap description | High/Medium/Low | Specific action needed |\n\n**Final Recommendation Rules**:\n- If 3 or more items **Fail**: Add a **\"Critical Gaps\"** summary listing specific data or analysis needed to resolve each failure. Recommend **ABANDON** or **PAUSE FOR RESEARCH**.\n- If 1-2 items **Fail**: Add **\"Addressable Gaps\"** section with mitigation strategies. Recommend **PROCEED WITH CAUTION**.\n- If 0 items **Fail**: Recommend **PROCEED TO DEVELOPMENT**.\n\nPresent your final output as a well-structured markdown document with clear section headers.\n\n### Common Mistakes to Avoid\n\n- **(Step 1)** Writing the MRD as a product specification document \342\200\224 MRD should focus on the problem opportunity, not the solution implementation details.\n- **(Step 1)** Starting projects based solely on key customer requests without evaluation \342\200\224 Customer requests do not guarantee market opportunity or ROI.\n- **(Step 2)** Believing customer service costs are inevitable and not optimizing the product \342\200\224 Product usability improvements can reduce support costs and improve margins.\n- **(Step 2)** Thinking developing new products is easier than improving existing ones \342\200\224 New products carry higher risk; existing products may have untapped potential.\n- **(Step 3)** Skipping the Validation Report table \342\200\224 The structured checklist ensures systematic evaluation and prevents bias.\n\n### Examples\n\n**Typical Trigger 1**: \"Help me evaluate whether this product idea is worth pursuing before we commit engineering resources\"\n\n**Typical Trigger 2**: \"We have three product concepts and need to decide which one to invest in \342\200\224 can you assess them systematically?\"\n\n**Typical Trigger 3**: \"Review this product opportunity and tell me if the business model is viable\"\n\n**Example Scenario**: System Integrator Requirements\n\nWhen selling through system integrators, the opportunity evaluation must consider:\n- Integrator extensibility requirements\n- Cooperation and revenue-sharing models\n- Channel conflict risks\n- Integration complexity impact on timeline\n\nSee \`{baseDir}/assets/atom_02_example.md\` for a complete walkthrough.\n\n### Linked Resources\n\n- **[template]** \`{baseDir}/assets/atom_01_template.md\` \342\200\224 MRD and Financial Analysis template structure\n- **[example]** \`{baseDir}/assets/atom_02_example.md\` \342\200\224 System Integrator Requirements walkthrough\n- **[reference]** \`{baseDir}/references/review-checklist.md\` \342\200\224 Complete review checklist with 10+ items\n- **[reference]** \`{baseDir}/references/ten-question-framework.md\` \342\200\224 Detailed ten-question framework for opportunity assessment\n`,
+};
 
 const DRAFT_FILES: Record<string, string> = {
     ...BASELINE_FILES,
     '/prompts/product-opportunity-eval.md': FRONTMATTER_PROMPT_FILE,
     '/prompts/code-review-assistant.md': CODE_REVIEW_PROMPT_FILE,
-    '/prompts/escaped-json-demo.md': ESCAPED_JSON_DEMO_FILE,
+    [BACKEND_RESPONSE_PREVIEW_PATH]: BACKEND_RESPONSE_SAMPLE.text,
     '/SKILL.md': [
         '# 资产工作台预览',
         '',
@@ -445,9 +431,9 @@ function PreviewApp() {
     const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['/assets', '/assets/templates', '/prompts', '/references', '/tests']));
     const [selectedVersionId, setSelectedVersionId] = useState('draft-20260407');
     const [compareVersionId, setCompareVersionId] = useState('v20260401');
-    const [selectedPath, setSelectedPath] = useState('/SKILL.md');
+    const [selectedPath, setSelectedPath] = useState(BACKEND_RESPONSE_PREVIEW_PATH);
     const [searchText, setSearchText] = useState('');
-    const [openPaths, setOpenPaths] = useState<string[]>(['/SKILL.md']);
+    const [openPaths, setOpenPaths] = useState<string[]>([BACKEND_RESPONSE_PREVIEW_PATH]);
     const [editorSessions, setEditorSessions] = useState<Record<string, PreviewSession>>({});
     const [editorText, setEditorText] = useState('');
     const [originalText, setOriginalText] = useState('');

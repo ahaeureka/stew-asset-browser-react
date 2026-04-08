@@ -33,6 +33,7 @@ interface MarkdownOutlineItem {
     depth: number;
     text: string;
     id: string;
+    lineNumber: number;
 }
 
 const tabStyle = (active: boolean): React.CSSProperties => ({
@@ -301,9 +302,18 @@ function stripFrontmatter(markdown: string): string {
 function buildMarkdownOutline(markdown: string, prefix: string): MarkdownOutlineItem[] {
     const createId = createHeadingIdFactory(prefix);
     const items: MarkdownOutlineItem[] = [];
-    const content = stripFrontmatter(markdown);
+    const lines = markdown.split(/\r?\n/);
+    let startIndex = 0;
 
-    for (const line of content.split(/\r?\n/)) {
+    if (/^---[ \t]*$/.test(lines[0] ?? '')) {
+        const endIndex = lines.findIndex((line, index) => index > 0 && /^---[ \t]*$/.test(line.trim()));
+        if (endIndex > 0) {
+            startIndex = endIndex + 1;
+        }
+    }
+
+    for (let index = startIndex; index < lines.length; index += 1) {
+        const line = lines[index] ?? '';
         const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line.trim());
         if (!match) {
             continue;
@@ -318,6 +328,7 @@ function buildMarkdownOutline(markdown: string, prefix: string): MarkdownOutline
             depth: match[1]?.length ?? 1,
             text,
             id: createId(text),
+            lineNumber: index + 1,
         });
     }
 
@@ -561,6 +572,7 @@ export function AssetEditor({
     const [internalMode, setInternalMode] = useState<EditorMode>('edit');
     const [copied, setCopied] = useState(false);
     const editorRef = useRef<Parameters<NonNullable<OnMount>>[0] | null>(null);
+    const monacoRef = useRef<Monaco | null>(null);
     const latestSaveRef = useRef(onSave);
     const latestCanEditRef = useRef(canEdit);
     const latestSavingRef = useRef(saving);
@@ -582,6 +594,32 @@ export function AssetEditor({
     function scrollToAnchor(id: string) {
         const target = previewRootRef.current?.querySelector<HTMLElement>(`#${id}`);
         target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function scrollEditorToLine(lineNumber: number) {
+        const editor = editorRef.current;
+        const monaco = monacoRef.current;
+        const model = editor?.getModel();
+        if (!editor || !monaco || !model) {
+            return;
+        }
+
+        const safeLineNumber = Math.min(Math.max(lineNumber, 1), model.getLineCount());
+        const maxColumn = model.getLineMaxColumn(safeLineNumber);
+        const range = new monaco.Range(safeLineNumber, 1, safeLineNumber, maxColumn);
+
+        editor.focus();
+        editor.setSelection(range);
+        editor.revealRangeInCenter(range);
+    }
+
+    function navigateToOutlineItem(item: MarkdownOutlineItem) {
+        if (activeMode === 'preview') {
+            scrollToAnchor(item.id);
+            return;
+        }
+
+        scrollEditorToLine(item.lineNumber);
     }
 
     async function handleCopyAll() {
@@ -658,6 +696,7 @@ export function AssetEditor({
 
     const handleEditorMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
+        monacoRef.current = monaco;
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
             void handleSaveRequest();
         });
@@ -771,7 +810,7 @@ export function AssetEditor({
                                         key={item.id}
                                         type="button"
                                         style={previewNavItemStyle(item.depth)}
-                                        onClick={() => scrollToAnchor(item.id)}
+                                        onClick={() => navigateToOutlineItem(item)}
                                     >
                                         {item.text}
                                     </button>
@@ -780,7 +819,6 @@ export function AssetEditor({
                         </nav>
                     ) : null}
                     <article style={markdownPreviewDocumentStyle}>
-                        <div style={markdownLeadStyle}>阅读视图 · GitHub Flavored Markdown · 使用 react-markdown 渲染</div>
                         <div ref={previewRootRef}>
                             {frontmatter && frontmatter.fields.length > 0 ? (
                                 <FrontmatterBlock fields={frontmatter.fields} />
@@ -792,7 +830,27 @@ export function AssetEditor({
                     </article>
                 </div>
             ) : (
-                <div style={{ flex: 1, minHeight: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                    {isMarkdown && markdownOutline.length > 0 ? (
+                        <nav style={{ ...markdownPreviewNavStyle, maxWidth: 'none', margin: '12px 12px 0', padding: compact ? '12px 14px' : '14px 16px', borderRadius: compact ? 16 : 18 }} aria-label="Table of contents">
+                            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                                文档目录
+                            </div>
+                            <div style={{ display: 'grid', gap: 2, maxHeight: compact ? 132 : 160, overflow: 'auto' }}>
+                                {markdownOutline.map((item) => (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        style={previewNavItemStyle(item.depth)}
+                                        onClick={() => navigateToOutlineItem(item)}
+                                    >
+                                        {item.text}
+                                    </button>
+                                ))}
+                            </div>
+                        </nav>
+                    ) : null}
+                    <div style={{ flex: 1, minHeight: 0 }}>
                     {!selectedEntry ? (
                         <EmptyMessage title="尚未选择文件" message="请先从左侧目录树选择一个文件，再进行查看或编辑。" />
                     ) : selectedEntry.entryKind !== 'file' ? (
@@ -833,6 +891,7 @@ export function AssetEditor({
                             }}
                         />
                     )}
+                    </div>
                 </div>
             )}
         </div>
