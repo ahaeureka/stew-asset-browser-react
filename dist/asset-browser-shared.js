@@ -1,12 +1,67 @@
 "use client";
 import React from 'react';
+export const LIGHT_THEME_VARS = {
+    '--stew-ab-bg': '#fcfcfd',
+    '--stew-ab-fg': '#0f172a',
+    '--stew-ab-muted-fg': '#64748b',
+    '--stew-ab-border': 'rgba(148, 163, 184, 0.16)',
+    '--stew-ab-surface': '#ffffff',
+    '--stew-ab-surface-muted': '#f8fafc',
+    '--stew-ab-surface-elevated': '#ffffff',
+    '--stew-ab-sidebar-bg': '#f8fafc',
+    '--stew-ab-topbar-bg': '#ffffff',
+    '--stew-ab-footer-bg': '#f8fafc',
+    '--stew-ab-accent': '#0ea5e9',
+    '--stew-ab-accent-soft': 'rgba(14, 165, 233, 0.12)',
+    '--stew-ab-accent-contrast': '#ffffff',
+    '--stew-ab-selected-bg': 'rgba(14, 165, 233, 0.12)',
+    '--stew-ab-shadow': '0 18px 50px rgba(15, 23, 42, 0.08)',
+    '--stew-ab-decoration-a': 'rgba(15, 118, 110, 0.08)',
+    '--stew-ab-decoration-b': 'rgba(14, 165, 233, 0.08)',
+};
+export const DARK_THEME_VARS = {
+    '--stew-ab-bg': '#0f172a',
+    '--stew-ab-fg': '#e2e8f0',
+    '--stew-ab-muted-fg': '#94a3b8',
+    '--stew-ab-border': 'rgba(148, 163, 184, 0.12)',
+    '--stew-ab-surface': '#1e293b',
+    '--stew-ab-surface-muted': '#1e293b',
+    '--stew-ab-surface-elevated': '#334155',
+    '--stew-ab-sidebar-bg': '#1e293b',
+    '--stew-ab-topbar-bg': '#1e293b',
+    '--stew-ab-footer-bg': '#1e293b',
+    '--stew-ab-accent': '#38bdf8',
+    '--stew-ab-accent-soft': 'rgba(56, 189, 248, 0.14)',
+    '--stew-ab-accent-contrast': '#0f172a',
+    '--stew-ab-selected-bg': 'rgba(56, 189, 248, 0.14)',
+    '--stew-ab-shadow': '0 18px 50px rgba(0, 0, 0, 0.32)',
+    '--stew-ab-decoration-a': 'rgba(45, 212, 191, 0.10)',
+    '--stew-ab-decoration-b': 'rgba(56, 189, 248, 0.10)',
+};
+export function resolveThemeVars(theme = 'light', themeVars, showDecorativeBackground = true) {
+    const base = theme === 'dark' ? { ...DARK_THEME_VARS } :
+        theme === 'inherit' ? { ...LIGHT_THEME_VARS } :
+            { ...LIGHT_THEME_VARS };
+    const merged = { ...base, ...themeVars };
+    if (!showDecorativeBackground) {
+        merged['--stew-ab-decoration-a'] = 'transparent';
+        merged['--stew-ab-decoration-b'] = 'transparent';
+    }
+    return merged;
+}
+export function resolveEditorTheme(theme = 'light', editorTheme) {
+    if (editorTheme) {
+        return editorTheme;
+    }
+    return theme === 'dark' ? 'vs-dark' : 'vs';
+}
 export const shellStyle = {
-    border: '1px solid rgba(15, 23, 42, 0.12)',
+    border: '1px solid var(--stew-ab-border, rgba(15, 23, 42, 0.12))',
     borderRadius: 20,
     overflow: 'hidden',
-    background: 'linear-gradient(180deg, #fcfcfd 0%, #f8fafc 100%)',
-    boxShadow: '0 18px 50px rgba(15, 23, 42, 0.08)',
-    color: '#0f172a',
+    backgroundColor: 'var(--stew-ab-bg, #fcfcfd)',
+    boxShadow: 'var(--stew-ab-shadow, 0 18px 50px rgba(15, 23, 42, 0.08))',
+    color: 'var(--stew-ab-fg, #0f172a)',
 };
 export const panelHandleStyle = {
     width: 8,
@@ -24,8 +79,8 @@ export const cardHeaderStyle = {
     justifyContent: 'space-between',
     gap: 12,
     padding: '16px 18px',
-    borderBottom: '1px solid rgba(148, 163, 184, 0.18)',
-    background: 'rgba(255,255,255,0.84)',
+    borderBottom: '1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.18))',
+    background: 'var(--stew-ab-topbar-bg, rgba(255,255,255,0.84))',
     backdropFilter: 'blur(10px)',
 };
 export const toolbarStyle = {
@@ -33,8 +88,8 @@ export const toolbarStyle = {
     flexWrap: 'wrap',
     gap: 10,
     padding: '14px 18px',
-    borderBottom: '1px solid rgba(148, 163, 184, 0.14)',
-    background: 'rgba(248,250,252,0.96)',
+    borderBottom: '1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.14))',
+    background: 'var(--stew-ab-surface-muted, rgba(248,250,252,0.96))',
 };
 export const buttonBaseStyle = {
     appearance: 'none',
@@ -43,30 +98,30 @@ export const buttonBaseStyle = {
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
-    border: '1px solid rgba(148,163,184,0.24)',
-    background: '#ffffff',
-    color: '#0f172a',
+    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.24))',
+    background: 'var(--stew-ab-surface, #ffffff)',
+    color: 'var(--stew-ab-fg, #0f172a)',
 };
 export const primaryButtonStyle = {
     ...buttonBaseStyle,
-    borderColor: 'rgba(14,165,233,0.28)',
-    background: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
-    color: '#ffffff',
+    borderColor: 'var(--stew-ab-accent-soft, rgba(14,165,233,0.28))',
+    background: 'linear-gradient(135deg, var(--stew-ab-accent, #0ea5e9), #2563eb)',
+    color: 'var(--stew-ab-accent-contrast, #ffffff)',
 };
 export const subHeaderStyle = {
     padding: '14px 16px',
-    borderBottom: '1px solid rgba(148,163,184,0.14)',
+    borderBottom: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    background: 'rgba(255,255,255,0.72)',
+    background: 'var(--stew-ab-surface, rgba(255,255,255,0.72))',
 };
 export const selectStyle = {
     borderRadius: 12,
-    border: '1px solid rgba(148,163,184,0.24)',
-    background: '#ffffff',
-    color: '#0f172a',
+    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.24))',
+    background: 'var(--stew-ab-surface, #ffffff)',
+    color: 'var(--stew-ab-fg, #0f172a)',
     padding: '10px 12px',
     fontSize: 13,
     minWidth: 0,
@@ -82,7 +137,7 @@ export function toneStyle(tone) {
     if (tone === 'error') {
         return { color: '#b42318', background: 'rgba(180,35,24,0.08)' };
     }
-    return { color: '#334155', background: 'rgba(148,163,184,0.10)' };
+    return { color: 'var(--stew-ab-muted-fg, #334155)', background: 'rgba(148,163,184,0.10)' };
 }
 export function formatBytes(bytes) {
     if (!Number.isFinite(bytes) || bytes <= 0) {
@@ -96,6 +151,17 @@ export function formatBytes(bytes) {
         index += 1;
     }
     return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
+}
+export function needsLiteralUnescape(text) {
+    if (!text.includes('\\n')) {
+        return false;
+    }
+    const realNewlines = (text.match(/\n/g) ?? []).length;
+    const escapedNewlines = (text.match(/\\n/g) ?? []).length;
+    return escapedNewlines > 2 && realNewlines < escapedNewlines;
+}
+export function unescapeLiteralNewlines(text) {
+    return text.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
 }
 export function languageFor(entry, hint) {
     const value = (hint || entry?.languageHint || entry?.contentType || '').toLowerCase();
@@ -199,16 +265,16 @@ export function pill(label, value) {
             borderRadius: 999,
             padding: '6px 10px',
             background: 'rgba(148,163,184,0.10)',
-            color: '#334155',
+            color: 'var(--stew-ab-fg, #334155)',
             fontSize: 12,
             fontWeight: 600,
         } },
-        React.createElement("span", { style: { color: '#64748b' } }, label),
+        React.createElement("span", { style: { color: 'var(--stew-ab-muted-fg, #64748b)' } }, label),
         React.createElement("span", null, value)));
 }
 export function EmptyMessage({ title, message }) {
     return (React.createElement("div", { style: { height: '100%', display: 'grid', placeItems: 'center', padding: 24 } },
         React.createElement("div", { style: { maxWidth: 320, textAlign: 'center', display: 'grid', gap: 8 } },
-            React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: '#0f172a' } }, title),
-            React.createElement("div", { style: { fontSize: 13, lineHeight: 1.6, color: '#64748b' } }, message))));
+            React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: 'var(--stew-ab-fg, #0f172a)' } }, title),
+            React.createElement("div", { style: { fontSize: 13, lineHeight: 1.6, color: 'var(--stew-ab-muted-fg, #64748b)' } }, message))));
 }

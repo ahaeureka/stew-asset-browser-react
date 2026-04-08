@@ -22,6 +22,7 @@ export interface AssetDiffViewerProps {
     onSelectEntry?: (path: string) => void;
     actions?: ReactNode;
     compact?: boolean;
+    editorTheme?: string;
 }
 
 export function AssetDiffViewer({
@@ -35,6 +36,7 @@ export function AssetDiffViewer({
     onSelectEntry,
     actions,
     compact = false,
+    editorTheme = 'vs',
 }: AssetDiffViewerProps) {
     const [renderSideBySide, setRenderSideBySide] = useState(true);
     const [ignoreTrimWhitespace, setIgnoreTrimWhitespace] = useState(true);
@@ -60,7 +62,7 @@ export function AssetDiffViewer({
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#f8fafc' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'var(--stew-ab-surface-muted, #f8fafc)' }}>
             <div style={headerStyle}>
                 <div style={{ display: 'grid', gap: 3 }}>
                     <span style={{ fontWeight: 700 }}>差异</span>
@@ -117,7 +119,7 @@ export function AssetDiffViewer({
                         modifiedModelPath={`file:///stew/diff/modified${selectedPath || '/untitled'}`}
                         keepCurrentOriginalModel
                         keepCurrentModifiedModel
-                        theme="vs-light"
+                        theme={editorTheme}
                         original={originalText}
                         modified={modifiedText}
                         onMount={handleDiffMount}

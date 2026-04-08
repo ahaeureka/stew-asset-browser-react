@@ -17,7 +17,10 @@ import {
     languageFor,
     pill,
     primaryButtonStyle,
+    resolveEditorTheme,
+    resolveThemeVars,
     selectStyle,
+    type AssetBrowserThemeMode,
     type TreeNode,
 } from '../src/asset-browser-shared';
 import { AssetBrowserConsoleShell } from '../src/asset-browser-console-shell';
@@ -69,6 +72,8 @@ const FILE_METADATA: Record<string, { languageHint: string; contentType: string 
     '/assets/atom_02_template.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/assets/templates/onboarding.yaml': { languageHint: 'yaml', contentType: 'application/yaml' },
     '/assets/templates/launch-checklist.md': { languageHint: 'markdown', contentType: 'text/markdown' },
+    '/prompts/product-opportunity-eval.md': { languageHint: 'markdown', contentType: 'text/markdown' },
+    '/prompts/code-review-assistant.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/references/review-checklist.md': { languageHint: 'markdown', contentType: 'text/markdown' },
     '/tests/trigger-test-cases.yaml': { languageHint: 'yaml', contentType: 'application/yaml' },
 };
@@ -184,8 +189,113 @@ const BASELINE_FILES: Record<string, string> = {
     ].join('\n'),
 };
 
+const FRONTMATTER_PROMPT_FILE = [
+    '---',
+    'name: product-opportunity-eval-business-model',
+    'description: Evaluates product opportunities through a ten-question framework and validates business models via financial analysis to confirm ROI.',
+    'metadata:',
+    '  pattern: pipeline',
+    '  category: domain-knowledge',
+    '  tags: [product-management, opportunity-assessment, business-model, roi-analysis]',
+    '  version: "1.1.0"',
+    '  author: skillforge',
+    '  license: MIT',
+    '  compatibility: claude-3.5+',
+    '---',
+    '',
+    '# Product Opportunity Evaluation and Business Model Validation',
+    '',
+    'A pipeline methodology for systematically assessing product opportunities through a ten-question framework and validating business models via financial analysis to ensure investment viability before development.',
+    '',
+    '### Context',
+    '',
+    'You are executing a **two-stage pipeline** to evaluate **$ARGUMENTS**.',
+    '',
+    'If the user provides files (documents, data, research), read them first. Use web search to gather additional context if needed.',
+    '',
+    '### Domain Context',
+    '',
+    'This methodology aligns with Product Opportunity Assessment frameworks found in modern product management literature.',
+    '',
+    '**Key principles**:',
+    '',
+    '- Separation of problem space (opportunity) and solution space (specification)',
+    '- Integration of financial viability (ROI) before engineering investment',
+    '- Evidence-based scoring with explicit pass/fail thresholds',
+    '',
+    '### Stage 1: Opportunity Assessment',
+    '',
+    '| Question | Focus Area |',
+    '| --- | --- |',
+    '| Q1 | Target user identification |',
+    '| Q2 | Problem severity and frequency |',
+    '| Q3 | Market size estimation |',
+    '| Q4 | Competitive landscape |',
+    '| Q5 | Differentiation strategy |',
+    '| Q6 | Go-to-market feasibility |',
+    '| Q7 | Technical complexity |',
+    '| Q8 | Revenue model clarity |',
+    '| Q9 | Team capability alignment |',
+    '| Q10 | Risk assessment |',
+    '',
+    '### Stage 2: Business Model Validation',
+    '',
+    '```yaml',
+    'validation_framework:',
+    '  revenue_streams:',
+    '    - type: subscription',
+    '    - type: usage_based',
+    '  cost_structure:',
+    '    fixed: [infrastructure, team]',
+    '    variable: [api_calls, storage]',
+    '  roi_threshold: 2.5x',
+    '  payback_period: 18_months',
+    '```',
+    '',
+    '> **Decision gate**: Proceed to MRD only if opportunity score >= 7/10 AND projected ROI >= 2.5x within 18 months.',
+].join('\n');
+
+const CODE_REVIEW_PROMPT_FILE = [
+    '---',
+    'name: code-review-assistant',
+    'description: Performs structured code reviews with security, performance, and maintainability analysis.',
+    'metadata:',
+    '  pattern: sequential',
+    '  category: engineering',
+    '  tags: [code-review, security, performance, best-practices]',
+    '  version: "2.0.3"',
+    '  author: devtools-team',
+    '---',
+    '',
+    '# Code Review Assistant',
+    '',
+    'A structured methodology for performing thorough code reviews across multiple quality dimensions.',
+    '',
+    '## Review Dimensions',
+    '',
+    '- **Security**: OWASP Top 10, injection vectors, auth bypass',
+    '- **Performance**: Time complexity, memory allocation, N+1 queries',
+    '- **Maintainability**: Naming, modularity, test coverage',
+    '- **Correctness**: Edge cases, error handling, race conditions',
+    '',
+    '## Output Format',
+    '',
+    '```json',
+    '{',
+    '  "severity": "critical | warning | info",',
+    '  "category": "security | performance | maintainability | correctness",',
+    '  "file": "path/to/file.rs",',
+    '  "line": 42,',
+    '  "message": "Description of the issue",',
+    '  "suggestion": "Recommended fix"',
+    '}',
+    '```',
+].join('\n');
+
 const DRAFT_FILES: Record<string, string> = {
     ...BASELINE_FILES,
+    '/prompts/product-opportunity-eval.md': FRONTMATTER_PROMPT_FILE,
+    '/prompts/code-review-assistant.md': CODE_REVIEW_PROMPT_FILE,
     '/SKILL.md': [
         '# 资产工作台预览',
         '',
@@ -303,7 +413,7 @@ const INITIAL_VERSIONS: AssetVersionSummary[] = [
 function PreviewApp() {
     const [versions, setVersions] = useState(INITIAL_VERSIONS);
     const [snapshots, setSnapshots] = useState(INITIAL_SNAPSHOTS);
-    const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['/assets', '/assets/templates', '/references', '/tests']));
+    const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['/assets', '/assets/templates', '/prompts', '/references', '/tests']));
     const [selectedVersionId, setSelectedVersionId] = useState('draft-20260407');
     const [compareVersionId, setCompareVersionId] = useState('v20260401');
     const [selectedPath, setSelectedPath] = useState('/SKILL.md');
@@ -314,6 +424,8 @@ function PreviewApp() {
     const [originalText, setOriginalText] = useState('');
     const [entryRevision, setEntryRevision] = useState(0);
     const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('edit');
+    const [themeMode, setThemeMode] = useState<AssetBrowserThemeMode>('light');
+    const [showDecorativeBackground, setShowDecorativeBackground] = useState(true);
     const [status, setStatus] = useState<PreviewStatus>({
         tone: 'neutral',
         text: '当前为产品演示模式，所有编辑、发布、导出和刷新操作都只在本地示例数据中生效。',
@@ -364,6 +476,14 @@ function PreviewApp() {
     const dirty = Boolean(currentSession?.dirty);
     const canEdit = Boolean(selectedVersion?.isDraft && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable);
     const canPreviewDocument = Boolean(selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable && currentLanguage === 'markdown');
+    const themeStyle = useMemo(
+        () => resolveThemeVars(themeMode, undefined, showDecorativeBackground),
+        [themeMode, showDecorativeBackground],
+    );
+    const resolvedEditorTheme = useMemo(
+        () => resolveEditorTheme(themeMode),
+        [themeMode],
+    );
     const openTabs: AssetEditorTab[] = useMemo(
         () => openPaths
             .map((path) => {
@@ -431,6 +551,8 @@ function PreviewApp() {
                 height="min(860px, calc(100vh - 52px))"
                 heading={`${ASSET_SPACE} / ${ASSET_ID}`}
                 kicker="资产工作台演示"
+                themeStyle={themeStyle}
+                themeMode={themeMode}
                 badges={(
                     <>
                         {pill('状态', formatVersionStatus(selectedVersion?.status))}
@@ -552,7 +674,19 @@ function PreviewApp() {
                 ) : null}
                 status={status}
                 sidebarTitle="资源目录"
-                sidebarSubtitle={`${countTreeNodes(filteredTreeNodes)} 项`}
+                sidebarSubtitle={(
+                    <>
+                        {`${countTreeNodes(filteredTreeNodes)} 项`}
+                        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                            <button type="button" style={{ ...buttonBaseStyle, padding: '4px 8px', fontSize: 11 }} onClick={() => setThemeMode('light')}>Light</button>
+                            <button type="button" style={{ ...buttonBaseStyle, padding: '4px 8px', fontSize: 11 }} onClick={() => setThemeMode('dark')}>Dark</button>
+                            <button type="button" style={{ ...buttonBaseStyle, padding: '4px 8px', fontSize: 11 }} onClick={() => setThemeMode('inherit')}>Inherit</button>
+                            <button type="button" style={{ ...buttonBaseStyle, padding: '4px 8px', fontSize: 11 }} onClick={() => setShowDecorativeBackground((v) => !v)}>
+                                {showDecorativeBackground ? 'Deco: ON' : 'Deco: OFF'}
+                            </button>
+                        </div>
+                    </>
+                )}
                 sidebarActions={(
                     <>
                         <span className="stew-asset-workspace__console-sidebar-pill">Mock Data</span>
@@ -636,6 +770,7 @@ function PreviewApp() {
                             originalText={compareSnapshot?.files[selectedPath] ?? ''}
                             modifiedText={selectedEntry?.entryKind === 'file' ? (selectedFiles[selectedPath] ?? '') : ''}
                             compact
+                            editorTheme={resolvedEditorTheme}
                             onSelectEntry={(path) => {
                                 setSelectedPath(path);
                                 setStatus({ tone: 'neutral', text: `已定位到变更资源 ${path}，方便继续审阅具体差异。` });
@@ -649,6 +784,7 @@ function PreviewApp() {
                             selectedEntry={selectedEntry}
                             modelPath={selectedPath ? `file:///preview/${selectedVersionId}${selectedPath}` : undefined}
                             language={currentLanguage}
+                            editorTheme={resolvedEditorTheme}
                             value={editorText}
                             canEdit={canEdit}
                             dirty={dirty}

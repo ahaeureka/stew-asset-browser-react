@@ -5,6 +5,7 @@ import { Editor, type Monaco, type OnMount } from '@monaco-editor/react';
 import Markdown, { type Components, type ExtraProps } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import remarkFrontmatter from 'remark-frontmatter';
 import remarkGfm from 'remark-gfm';
 import type { AssetTreeEntry } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 import {
@@ -12,7 +13,9 @@ import {
     EmptyMessage,
     formatBytes,
     monoFont,
+    needsLiteralUnescape,
     subHeaderStyle,
+    unescapeLiteralNewlines,
 } from './asset-browser-shared';
 
 type EditorMode = 'edit' | 'preview';
@@ -235,11 +238,72 @@ function MarkdownCodeBlockFrame({ children, copySource }: { children: ReactNode;
     );
 }
 
+interface ParsedFrontmatter {
+    fields: Array<{ key: string; value: string }>;
+    body: string;
+}
+
+function parseFrontmatter(text: string): ParsedFrontmatter | null {
+    const match = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(text);
+    if (!match) {
+        return null;
+    }
+
+    const rawYaml = match[1] || '';
+    const body = text.slice(match[0].length);
+    const fields: Array<{ key: string; value: string }> = [];
+
+    for (const line of rawYaml.split(/\r?\n/)) {
+        const kv = /^([\w][\w.\-]*):\s*(.*)$/.exec(line.trim());
+        if (kv) {
+            fields.push({ key: kv[1], value: kv[2].replace(/^["']|["']$/g, '') });
+        }
+    }
+
+    return { fields, body };
+}
+
+
+function FrontmatterBlock({ fields }: { fields: Array<{ key: string; value: string }> }) {
+    if (fields.length === 0) {
+        return null;
+    }
+
+    return (
+        <div style={{
+            margin: '0 0 20px 0',
+            padding: '14px 18px',
+            borderRadius: 12,
+            border: '1px solid rgba(148,163,184,0.18)',
+            background: 'rgba(248,250,252,0.8)',
+            fontSize: 13,
+            lineHeight: 1.6,
+        }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                Frontmatter
+            </div>
+            <div style={{ display: 'grid', gap: 4 }}>
+                {fields.map(({ key, value }) => (
+                    <div key={key} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, color: '#334155', fontFamily: monoFont, fontSize: 12 }}>{key}:</span>
+                        <span style={{ color: '#475569', wordBreak: 'break-word' }}>{value}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function stripFrontmatter(markdown: string): string {
+    return markdown.replace(/^---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, '');
+}
+
 function buildMarkdownOutline(markdown: string, prefix: string): MarkdownOutlineItem[] {
     const createId = createHeadingIdFactory(prefix);
     const items: MarkdownOutlineItem[] = [];
+    const content = stripFrontmatter(markdown);
 
-    for (const line of markdown.split(/\r?\n/)) {
+    for (const line of content.split(/\r?\n/)) {
         const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line.trim());
         if (!match) {
             continue;
@@ -456,6 +520,7 @@ export interface AssetEditorProps {
     selectedEntry: AssetTreeEntry | null;
     modelPath?: string;
     language: string;
+    editorTheme?: string;
     value: string;
     canEdit: boolean;
     dirty: boolean;
@@ -477,6 +542,7 @@ export function AssetEditor({
     selectedEntry,
     modelPath,
     language,
+    editorTheme = 'vs',
     value,
     canEdit,
     dirty,
@@ -493,6 +559,7 @@ export function AssetEditor({
     showModeSwitch = true,
 }: AssetEditorProps) {
     const [internalMode, setInternalMode] = useState<EditorMode>('edit');
+    const [copied, setCopied] = useState(false);
     const editorRef = useRef<Parameters<NonNullable<OnMount>>[0] | null>(null);
     const latestSaveRef = useRef(onSave);
     const latestCanEditRef = useRef(canEdit);
@@ -501,6 +568,12 @@ export function AssetEditor({
     const previewRootRef = useRef<HTMLDivElement | null>(null);
     const isMarkdown = language === 'markdown';
     const activeMode = mode ?? internalMode;
+
+    const displayValue = useMemo(
+        () => needsLiteralUnescape(value) ? unescapeLiteralNewlines(value) : value,
+        [value],
+    );
+
     const previewAnchorPrefix = useMemo(
         () => `preview-${slugifyHeading(selectedPath || 'markdown-preview') || 'markdown-preview'}`,
         [selectedPath],
@@ -511,9 +584,27 @@ export function AssetEditor({
         target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    async function handleCopyAll() {
+        await copyText(displayValue);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1400);
+    }
+
+    const frontmatter = useMemo(() => {
+        if (!isMarkdown) {
+            return null;
+        }
+        return parseFrontmatter(displayValue);
+    }, [isMarkdown, displayValue]);
+
+    const markdownBody = useMemo(
+        () => frontmatter ? frontmatter.body : displayValue,
+        [frontmatter, displayValue],
+    );
+
     const markdownOutline = useMemo(
-        () => buildMarkdownOutline(value, previewAnchorPrefix),
-        [previewAnchorPrefix, value],
+        () => buildMarkdownOutline(displayValue, previewAnchorPrefix),
+        [previewAnchorPrefix, displayValue],
     );
     const markdownComponents = useMemo(
         () => createMarkdownComponents(previewAnchorPrefix, scrollToAnchor),
@@ -539,6 +630,21 @@ export function AssetEditor({
             return;
         }
         await editor.getAction(actionId)?.run();
+    }
+
+    async function handleFormatRequest() {
+        const editor = editorRef.current;
+        if (!editor) {
+            return;
+        }
+        const model = editor.getModel();
+        if (model) {
+            const current = model.getValue();
+            if (needsLiteralUnescape(current)) {
+                model.setValue(unescapeLiteralNewlines(current));
+            }
+        }
+        await editor.getAction('editor.action.formatDocument')?.run();
     }
 
     async function handleSaveRequest() {
@@ -630,8 +736,13 @@ export function AssetEditor({
                         <>
                             <button type="button" style={compactActionStyle} onClick={() => void runEditorAction('actions.find')}>查找</button>
                             <button type="button" style={compactActionStyle} onClick={() => void runEditorAction('editor.action.startFindReplaceAction')}>替换</button>
-                            <button type="button" style={compactActionStyle} disabled={!canEdit} onClick={() => void runEditorAction('editor.action.formatDocument')}>格式化</button>
+                            <button type="button" style={compactActionStyle} disabled={!canEdit} onClick={() => void handleFormatRequest()}>格式化</button>
                         </>
+                    ) : null}
+                    {selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable && displayValue ? (
+                        <button type="button" style={compactActionStyle} onClick={() => void handleCopyAll()}>
+                            {copied ? '已复制' : '复制'}
+                        </button>
                     ) : null}
                     {isMarkdown && showModeSwitch ? (
                         <div style={{ display: 'inline-flex', gap: 2, background: 'rgba(148,163,184,0.10)', borderRadius: 10, padding: 2 }}>
@@ -671,8 +782,11 @@ export function AssetEditor({
                     <article style={markdownPreviewDocumentStyle}>
                         <div style={markdownLeadStyle}>阅读视图 · GitHub Flavored Markdown · 使用 react-markdown 渲染</div>
                         <div ref={previewRootRef}>
-                            <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                                {value}
+                            {frontmatter && frontmatter.fields.length > 0 ? (
+                                <FrontmatterBlock fields={frontmatter.fields} />
+                            ) : null}
+                            <Markdown remarkPlugins={[remarkGfm, remarkFrontmatter]} components={markdownComponents}>
+                                {markdownBody}
                             </Markdown>
                         </div>
                     </article>
@@ -691,8 +805,8 @@ export function AssetEditor({
                             defaultLanguage="plaintext"
                             path={modelPath}
                             language={language}
-                            theme="vs-light"
-                            value={value}
+                            theme={editorTheme}
+                            value={displayValue}
                             onMount={handleEditorMount}
                             onChange={(next) => onChange(next ?? '')}
                             saveViewState

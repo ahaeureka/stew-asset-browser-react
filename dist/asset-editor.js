@@ -4,8 +4,9 @@ import { Editor } from '@monaco-editor/react';
 import Markdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import remarkFrontmatter from 'remark-frontmatter';
 import remarkGfm from 'remark-gfm';
-import { buttonBaseStyle, EmptyMessage, formatBytes, monoFont, subHeaderStyle, } from './asset-browser-shared';
+import { buttonBaseStyle, EmptyMessage, formatBytes, monoFont, needsLiteralUnescape, subHeaderStyle, unescapeLiteralNewlines, } from './asset-browser-shared';
 const tabStyle = (active) => ({
     appearance: 'none',
     border: 'none',
@@ -179,10 +180,50 @@ function MarkdownCodeBlockFrame({ children, copySource }) {
         copySource ? (React.createElement("button", { type: "button", style: copyButtonStyle, onClick: () => void handleCopy() }, copied ? '已复制' : '复制')) : null,
         children));
 }
+function parseFrontmatter(text) {
+    const match = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(text);
+    if (!match) {
+        return null;
+    }
+    const rawYaml = match[1] || '';
+    const body = text.slice(match[0].length);
+    const fields = [];
+    for (const line of rawYaml.split(/\r?\n/)) {
+        const kv = /^([\w][\w.\-]*):\s*(.*)$/.exec(line.trim());
+        if (kv) {
+            fields.push({ key: kv[1], value: kv[2].replace(/^["']|["']$/g, '') });
+        }
+    }
+    return { fields, body };
+}
+function FrontmatterBlock({ fields }) {
+    if (fields.length === 0) {
+        return null;
+    }
+    return (React.createElement("div", { style: {
+            margin: '0 0 20px 0',
+            padding: '14px 18px',
+            borderRadius: 12,
+            border: '1px solid rgba(148,163,184,0.18)',
+            background: 'rgba(248,250,252,0.8)',
+            fontSize: 13,
+            lineHeight: 1.6,
+        } },
+        React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 } }, "Frontmatter"),
+        React.createElement("div", { style: { display: 'grid', gap: 4 } }, fields.map(({ key, value }) => (React.createElement("div", { key: key, style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
+            React.createElement("span", { style: { fontWeight: 600, color: '#334155', fontFamily: monoFont, fontSize: 12 } },
+                key,
+                ":"),
+            React.createElement("span", { style: { color: '#475569', wordBreak: 'break-word' } }, value)))))));
+}
+function stripFrontmatter(markdown) {
+    return markdown.replace(/^---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, '');
+}
 function buildMarkdownOutline(markdown, prefix) {
     const createId = createHeadingIdFactory(prefix);
     const items = [];
-    for (const line of markdown.split(/\r?\n/)) {
+    const content = stripFrontmatter(markdown);
+    for (const line of content.split(/\r?\n/)) {
         const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line.trim());
         if (!match) {
             continue;
@@ -288,8 +329,9 @@ function createMarkdownComponents(prefix, onNavigate) {
         strong: ({ children, node, style, ...props }) => (React.createElement("strong", { ...props, style: mergeStyle({ fontWeight: 600 }, style) }, children)),
     };
 }
-export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, value, canEdit, dirty, saving = false, entryRevision, openTabs = [], onChange, onSave, onSelectTab, onCloseTab, actions, compact = false, mode, showModeSwitch = true, }) {
+export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme = 'vs', value, canEdit, dirty, saving = false, entryRevision, openTabs = [], onChange, onSave, onSelectTab, onCloseTab, actions, compact = false, mode, showModeSwitch = true, }) {
     const [internalMode, setInternalMode] = useState('edit');
+    const [copied, setCopied] = useState(false);
     const editorRef = useRef(null);
     const latestSaveRef = useRef(onSave);
     const latestCanEditRef = useRef(canEdit);
@@ -298,12 +340,25 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
     const previewRootRef = useRef(null);
     const isMarkdown = language === 'markdown';
     const activeMode = mode ?? internalMode;
+    const displayValue = useMemo(() => needsLiteralUnescape(value) ? unescapeLiteralNewlines(value) : value, [value]);
     const previewAnchorPrefix = useMemo(() => `preview-${slugifyHeading(selectedPath || 'markdown-preview') || 'markdown-preview'}`, [selectedPath]);
     function scrollToAnchor(id) {
         const target = previewRootRef.current?.querySelector(`#${id}`);
         target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    const markdownOutline = useMemo(() => buildMarkdownOutline(value, previewAnchorPrefix), [previewAnchorPrefix, value]);
+    async function handleCopyAll() {
+        await copyText(displayValue);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1400);
+    }
+    const frontmatter = useMemo(() => {
+        if (!isMarkdown) {
+            return null;
+        }
+        return parseFrontmatter(displayValue);
+    }, [isMarkdown, displayValue]);
+    const markdownBody = useMemo(() => frontmatter ? frontmatter.body : displayValue, [frontmatter, displayValue]);
+    const markdownOutline = useMemo(() => buildMarkdownOutline(displayValue, previewAnchorPrefix), [previewAnchorPrefix, displayValue]);
     const markdownComponents = useMemo(() => createMarkdownComponents(previewAnchorPrefix, scrollToAnchor), [previewAnchorPrefix]);
     useEffect(() => {
         latestSaveRef.current = onSave;
@@ -322,6 +377,20 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
             return;
         }
         await editor.getAction(actionId)?.run();
+    }
+    async function handleFormatRequest() {
+        const editor = editorRef.current;
+        if (!editor) {
+            return;
+        }
+        const model = editor.getModel();
+        if (model) {
+            const current = model.getValue();
+            if (needsLiteralUnescape(current)) {
+                model.setValue(unescapeLiteralNewlines(current));
+            }
+        }
+        await editor.getAction('editor.action.formatDocument')?.run();
     }
     async function handleSaveRequest() {
         if (!latestSaveRef.current || !latestCanEditRef.current || latestSavingRef.current) {
@@ -386,7 +455,8 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
                 activeMode === 'edit' && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable ? (React.createElement(React.Fragment, null,
                     React.createElement("button", { type: "button", style: compactActionStyle, onClick: () => void runEditorAction('actions.find') }, "\u67E5\u627E"),
                     React.createElement("button", { type: "button", style: compactActionStyle, onClick: () => void runEditorAction('editor.action.startFindReplaceAction') }, "\u66FF\u6362"),
-                    React.createElement("button", { type: "button", style: compactActionStyle, disabled: !canEdit, onClick: () => void runEditorAction('editor.action.formatDocument') }, "\u683C\u5F0F\u5316"))) : null,
+                    React.createElement("button", { type: "button", style: compactActionStyle, disabled: !canEdit, onClick: () => void handleFormatRequest() }, "\u683C\u5F0F\u5316"))) : null,
+                selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable && displayValue ? (React.createElement("button", { type: "button", style: compactActionStyle, onClick: () => void handleCopyAll() }, copied ? '已复制' : '复制')) : null,
                 isMarkdown && showModeSwitch ? (React.createElement("div", { style: { display: 'inline-flex', gap: 2, background: 'rgba(148,163,184,0.10)', borderRadius: 10, padding: 2 } },
                     React.createElement("button", { type: "button", style: tabStyle(activeMode === 'edit'), onClick: () => setInternalMode('edit') }, "\u7F16\u8F91"),
                     React.createElement("button", { type: "button", style: tabStyle(activeMode === 'preview'), onClick: () => setInternalMode('preview') }, "\u9884\u89C8"))) : null,
@@ -399,7 +469,8 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
             React.createElement("article", { style: markdownPreviewDocumentStyle },
                 React.createElement("div", { style: markdownLeadStyle }, "\u9605\u8BFB\u89C6\u56FE \u00B7 GitHub Flavored Markdown \u00B7 \u4F7F\u7528 react-markdown \u6E32\u67D3"),
                 React.createElement("div", { ref: previewRootRef },
-                    React.createElement(Markdown, { remarkPlugins: [remarkGfm], components: markdownComponents }, value))))) : (React.createElement("div", { style: { flex: 1, minHeight: 0 } }, !selectedEntry ? (React.createElement(EmptyMessage, { title: "\u5C1A\u672A\u9009\u62E9\u6587\u4EF6", message: "\u8BF7\u5148\u4ECE\u5DE6\u4FA7\u76EE\u5F55\u6811\u9009\u62E9\u4E00\u4E2A\u6587\u4EF6\uFF0C\u518D\u8FDB\u884C\u67E5\u770B\u6216\u7F16\u8F91\u3002" })) : selectedEntry.entryKind !== 'file' ? (React.createElement(EmptyMessage, { title: "\u5F53\u524D\u4E3A\u76EE\u5F55", message: "\u8BF7\u9009\u62E9\u6587\u4EF6\u8282\u70B9\u540E\u518D\u6253\u5F00\u7F16\u8F91\u533A\u3002" })) : !selectedEntry.isTextPreviewable ? (React.createElement(EmptyMessage, { title: "\u4E8C\u8FDB\u5236\u6587\u4EF6", message: "\u5F53\u524D\u8D44\u6E90\u4E0D\u652F\u6301\u6587\u672C\u9884\u89C8\u3002" })) : (React.createElement(Editor, { height: "100%", defaultLanguage: "plaintext", path: modelPath, language: language, theme: "vs-light", value: value, onMount: handleEditorMount, onChange: (next) => onChange(next ?? ''), saveViewState: true, keepCurrentModel: true, options: {
+                    frontmatter && frontmatter.fields.length > 0 ? (React.createElement(FrontmatterBlock, { fields: frontmatter.fields })) : null,
+                    React.createElement(Markdown, { remarkPlugins: [remarkGfm, remarkFrontmatter], components: markdownComponents }, markdownBody))))) : (React.createElement("div", { style: { flex: 1, minHeight: 0 } }, !selectedEntry ? (React.createElement(EmptyMessage, { title: "\u5C1A\u672A\u9009\u62E9\u6587\u4EF6", message: "\u8BF7\u5148\u4ECE\u5DE6\u4FA7\u76EE\u5F55\u6811\u9009\u62E9\u4E00\u4E2A\u6587\u4EF6\uFF0C\u518D\u8FDB\u884C\u67E5\u770B\u6216\u7F16\u8F91\u3002" })) : selectedEntry.entryKind !== 'file' ? (React.createElement(EmptyMessage, { title: "\u5F53\u524D\u4E3A\u76EE\u5F55", message: "\u8BF7\u9009\u62E9\u6587\u4EF6\u8282\u70B9\u540E\u518D\u6253\u5F00\u7F16\u8F91\u533A\u3002" })) : !selectedEntry.isTextPreviewable ? (React.createElement(EmptyMessage, { title: "\u4E8C\u8FDB\u5236\u6587\u4EF6", message: "\u5F53\u524D\u8D44\u6E90\u4E0D\u652F\u6301\u6587\u672C\u9884\u89C8\u3002" })) : (React.createElement(Editor, { height: "100%", defaultLanguage: "plaintext", path: modelPath, language: language, theme: editorTheme, value: displayValue, onMount: handleEditorMount, onChange: (next) => onChange(next ?? ''), saveViewState: true, keepCurrentModel: true, options: {
                 readOnly: !canEdit,
                 minimap: { enabled: false },
                 smoothScrolling: true,

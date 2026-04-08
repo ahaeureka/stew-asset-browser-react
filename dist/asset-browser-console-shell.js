@@ -2,9 +2,10 @@
 import React from 'react';
 import { shellStyle } from './asset-browser-shared';
 import './asset-browser-console.css';
-export function AssetBrowserConsoleShell({ className, style, height = '100%', heading, kicker, badges, controls, actions, status, sidebarTitle, sidebarSubtitle, sidebarActions, sidebarCardTitle, sidebarCardBody, sidebarContent, mainTitle, mainSubtitle, viewSwitcher, mainContent, compareNote, footer, }) {
-    return (React.createElement("section", { className: joinClassNames('stew-asset-workspace', 'stew-asset-workspace--console', className), style: {
+export function AssetBrowserConsoleShell({ className, style, height = '100%', heading, themeStyle, themeMode, kicker, badges, controls, actions, status, sidebarTitle, sidebarSubtitle, sidebarActions, sidebarCardTitle, sidebarCardBody, sidebarContent, mainTitle, mainSubtitle, viewSwitcher, mainContent, compareNote, footer, }) {
+    return (React.createElement("section", { className: joinClassNames('stew-asset-workspace', 'stew-asset-workspace--console', className), "data-stew-theme": themeMode, style: {
             ...shellStyle,
+            ...themeStyle,
             height,
             ...style,
         } },

@@ -1,10 +1,10 @@
 .stew-asset-workspace--console {
     display: flex;
     flex-direction: column;
-    background:
-        radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 30%),
-        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 26%),
-        linear-gradient(180deg, #fcfefd 0%, #f3f7f7 100%);
+    background-color: var(--stew-ab-bg, #fcfcfd);
+    background-image:
+        radial-gradient(circle at top left, var(--stew-ab-decoration-a, rgba(15, 118, 110, 0.08)), transparent 30%),
+        radial-gradient(circle at top right, var(--stew-ab-decoration-b, rgba(14, 165, 233, 0.08)), transparent 26%);
 }
 
 .stew-asset-workspace__console-topbar {
@@ -13,8 +13,8 @@
     align-items: end;
     gap: 14px;
     padding: 12px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-    background: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.14));
+    background: var(--stew-ab-topbar-bg, rgba(255, 255, 255, 0.9));
 }
 
 .stew-asset-workspace__console-titleblock {
@@ -28,14 +28,14 @@
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #0f766e;
+    color: var(--stew-ab-accent, #0f766e);
 }
 
 .stew-asset-workspace__console-heading {
     font-size: 20px;
     font-weight: 800;
     letter-spacing: -0.03em;
-    color: #0f172a;
+    color: var(--stew-ab-fg, #0f172a);
 }
 
 .stew-asset-workspace__console-badges {
@@ -80,15 +80,15 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #64748b;
+    color: var(--stew-ab-muted-fg, #64748b);
 }
 
 .stew-asset-workspace__console-status {
     position: relative;
     margin: 0;
     padding: 8px 12px 8px 38px;
-    border-top: 1px solid rgba(148, 163, 184, 0.12);
-    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    border-top: 1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.12));
+    border-bottom: 1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.12));
     font-size: 12px;
     font-weight: 600;
     line-height: 1.45;
@@ -158,16 +158,16 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border-right: 1px solid rgba(148, 163, 184, 0.16);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(247, 250, 252, 0.94));
+    border-right: 1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.16));
+    background: var(--stew-ab-sidebar-bg, #f8fafc);
 }
 
 .stew-asset-workspace__console-sidebar-header {
     display: grid;
     gap: 8px;
     padding: 10px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-    background: rgba(255, 255, 255, 0.82);
+    border-bottom: 1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.14));
+    background: var(--stew-ab-surface, rgba(255, 255, 255, 0.82));
 }
 
 .stew-asset-workspace__console-sidebar-topline {
@@ -180,14 +180,14 @@
 .stew-asset-workspace__console-sidebar-title {
     font-size: 13px;
     font-weight: 800;
-    color: #0f172a;
+    color: var(--stew-ab-fg, #0f172a);
 }
 
 .stew-asset-workspace__console-sidebar-copy,
 .stew-asset-workspace__console-version-card-copy {
     font-size: 11px;
     line-height: 1.45;
-    color: #64748b;
+    color: var(--stew-ab-muted-fg, #64748b);
 }
 
 .stew-asset-workspace__console-sidebar-actions {
@@ -202,8 +202,8 @@
     min-height: 24px;
     padding: 0 8px;
     border-radius: 999px;
-    background: rgba(15, 118, 110, 0.08);
-    color: #115e59;
+    background: var(--stew-ab-accent-soft, rgba(15, 118, 110, 0.08));
+    color: var(--stew-ab-accent, #115e59);
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 0.04em;
@@ -214,14 +214,14 @@
     gap: 4px;
     padding: 10px;
     border-radius: 14px;
-    background: rgba(248, 250, 252, 0.92);
-    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: var(--stew-ab-surface-muted, rgba(248, 250, 252, 0.92));
+    border: 1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.14));
 }
 
 .stew-asset-workspace__console-version-card-title {
     font-size: 12px;
     font-weight: 800;
-    color: #334155;
+    color: var(--stew-ab-fg, #334155);
 }
 
 .stew-asset-workspace__console-tree-region {
@@ -236,7 +236,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(250, 252, 252, 0.98));
+    background: var(--stew-ab-surface, rgba(255, 255, 255, 0.84));
 }
 
 .stew-asset-workspace__console-main-topbar {
@@ -245,8 +245,8 @@
     justify-content: space-between;
     gap: 12px;
     padding: 10px 12px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-    background: rgba(255, 255, 255, 0.84);
+    border-bottom: 1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.14));
+    background: var(--stew-ab-topbar-bg, rgba(255, 255, 255, 0.84));
 }
 
 .stew-asset-workspace__console-entry-meta {
@@ -258,7 +258,7 @@
 .stew-asset-workspace__console-entry-title {
     font-size: 14px;
     font-weight: 800;
-    color: #0f172a;
+    color: var(--stew-ab-fg, #0f172a);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -266,7 +266,7 @@
 
 .stew-asset-workspace__console-entry-copy {
     font-size: 12px;
-    color: #64748b;
+    color: var(--stew-ab-muted-fg, #64748b);
     line-height: 1.45;
 }
 
@@ -285,7 +285,7 @@
     padding: 0 12px;
     border-radius: 10px;
     background: transparent;
-    color: #475569;
+    color: var(--stew-ab-muted-fg, #475569);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
@@ -293,8 +293,8 @@
 }
 
 .stew-asset-workspace__console-view-button.is-active {
-    background: rgba(255, 255, 255, 0.96);
-    color: #0f172a;
+    background: var(--stew-ab-surface-elevated, rgba(255, 255, 255, 0.96));
+    color: var(--stew-ab-fg, #0f172a);
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
@@ -311,10 +311,10 @@
 .stew-asset-workspace__console-compare-note,
 .stew-asset-workspace__console-footer {
     padding: 10px 12px;
-    border-top: 1px solid rgba(148, 163, 184, 0.12);
+    border-top: 1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.12));
     font-size: 12px;
-    color: #64748b;
-    background: rgba(248, 250, 252, 0.92);
+    color: var(--stew-ab-muted-fg, #64748b);
+    background: var(--stew-ab-footer-bg, rgba(248, 250, 252, 0.92));
 }
 
 .stew-asset-workspace__console-tree-region .stew-asset-tree .rc-tree-indent-unit {
@@ -371,17 +371,17 @@
 }
 
 .stew-asset-workspace__console-tree-region .stew-asset-tree__row[data-selected='true'] {
-    background: rgba(15, 118, 110, 0.08);
-    color: #0f172a;
+    background: var(--stew-ab-selected-bg, rgba(15, 118, 110, 0.08));
+    color: var(--stew-ab-fg, #0f172a);
 }
 
 .stew-asset-workspace__console-tree-region .stew-asset-tree__row[data-selected='true'] .stew-asset-tree__meta {
-    color: #0f766e;
+    color: var(--stew-ab-accent, #0f766e);
 }
 
 .stew-asset-workspace__console-tree-region .stew-asset-tree__action-button {
-    border-color: rgba(15, 118, 110, 0.16);
-    background: rgba(255, 255, 255, 0.92);
+    border-color: var(--stew-ab-border, rgba(15, 118, 110, 0.16));
+    background: var(--stew-ab-surface, rgba(255, 255, 255, 0.92));
 }
 
 @media (max-width: 1180px) {
@@ -401,7 +401,7 @@
 
     .stew-asset-workspace__console-sidebar {
         border-right: 0;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+        border-bottom: 1px solid var(--stew-ab-border, rgba(148, 163, 184, 0.16));
         max-height: 44vh;
     }
 

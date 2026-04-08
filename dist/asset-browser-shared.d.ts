@@ -1,5 +1,30 @@
 import React, { type CSSProperties, type ReactNode } from 'react';
 import type { AssetCollection, DownloadEntryResult, AssetTreeEntry, AssetVersionSummary, CreateDraftResult, PublishResult, SaveTextResult } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
+export type AssetBrowserThemeMode = 'light' | 'dark' | 'inherit';
+export type AssetBrowserEditorTheme = 'vs' | 'vs-dark' | (string & {});
+export interface AssetBrowserThemeVars {
+    '--stew-ab-bg': string;
+    '--stew-ab-fg': string;
+    '--stew-ab-muted-fg': string;
+    '--stew-ab-border': string;
+    '--stew-ab-surface': string;
+    '--stew-ab-surface-muted': string;
+    '--stew-ab-surface-elevated': string;
+    '--stew-ab-sidebar-bg': string;
+    '--stew-ab-topbar-bg': string;
+    '--stew-ab-footer-bg': string;
+    '--stew-ab-accent': string;
+    '--stew-ab-accent-soft': string;
+    '--stew-ab-accent-contrast': string;
+    '--stew-ab-selected-bg': string;
+    '--stew-ab-shadow': string;
+    '--stew-ab-decoration-a': string;
+    '--stew-ab-decoration-b': string;
+}
+export declare const LIGHT_THEME_VARS: AssetBrowserThemeVars;
+export declare const DARK_THEME_VARS: AssetBrowserThemeVars;
+export declare function resolveThemeVars(theme?: AssetBrowserThemeMode, themeVars?: Partial<AssetBrowserThemeVars>, showDecorativeBackground?: boolean): Record<string, string>;
+export declare function resolveEditorTheme(theme?: AssetBrowserThemeMode, editorTheme?: AssetBrowserEditorTheme): string;
 export type WorkspaceTone = 'neutral' | 'success' | 'warning' | 'error';
 export interface StatusMessage {
     tone: WorkspaceTone;
@@ -76,6 +101,8 @@ export declare const selectStyle: CSSProperties;
 export declare const monoFont = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace";
 export declare function toneStyle(tone: WorkspaceTone): CSSProperties;
 export declare function formatBytes(bytes: number): string;
+export declare function needsLiteralUnescape(text: string): boolean;
+export declare function unescapeLiteralNewlines(text: string): string;
 export declare function languageFor(entry: AssetTreeEntry | null, hint: string): string;
 export declare function buildTree(entries: AssetTreeEntry[]): TreeNode[];
 export declare function collectInitialExpanded(nodes: TreeNode[]): Set<string>;

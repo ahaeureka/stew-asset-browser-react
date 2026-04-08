@@ -34,12 +34,18 @@ import {
     cardHeaderStyle,
     collectInitialExpanded,
     type AssetBrowserActionContext,
+    type AssetBrowserEditorTheme,
+    type AssetBrowserThemeMode,
+    type AssetBrowserThemeVars,
     type AssetBrowserWorkspaceCallbacks,
     type AssetBrowserWorkspaceState,
     languageFor,
+    needsLiteralUnescape,
     panelHandleStyle,
     pill,
     primaryButtonStyle,
+    resolveEditorTheme,
+    resolveThemeVars,
     sectionStyle,
     selectStyle,
     shellStyle,
@@ -47,6 +53,7 @@ import {
     toneStyle,
     toolbarStyle,
     type TreeNode,
+    unescapeLiteralNewlines,
 } from './asset-browser-shared';
 import { AssetBrowserConsoleShell } from './asset-browser-console-shell';
 import { AssetTree } from './asset-tree';
@@ -105,6 +112,10 @@ export interface AssetBrowserWorkspaceProps {
     appearance?: AssetBrowserWorkspaceAppearance;
     enableEditing?: boolean;
     defaultDraftDescription?: string;
+    theme?: AssetBrowserThemeMode;
+    themeVars?: Partial<AssetBrowserThemeVars>;
+    editorTheme?: AssetBrowserEditorTheme;
+    showDecorativeBackground?: boolean;
     callbacks?: AssetBrowserWorkspaceCallbacks;
     onError?: (error: unknown) => void;
     onStateChange?: (state: AssetBrowserWorkspaceState) => void;
@@ -131,6 +142,10 @@ export function AssetBrowserWorkspace({
     appearance = 'default',
     enableEditing = true,
     defaultDraftDescription = 'Edit assets',
+    theme = 'light',
+    themeVars,
+    editorTheme,
+    showDecorativeBackground = true,
     callbacks,
     onError,
     onStateChange,
@@ -175,6 +190,15 @@ export function AssetBrowserWorkspace({
     const mountedRef = useRef(true);
     const editorSessionsRef = useRef<Record<string, EditorSession>>({});
     const isConsole = appearance === 'console';
+
+    const themeStyle = useMemo(
+        () => resolveThemeVars(theme, themeVars, showDecorativeBackground),
+        [theme, themeVars, showDecorativeBackground],
+    );
+    const resolvedEditorTheme = useMemo(
+        () => resolveEditorTheme(theme, editorTheme),
+        [theme, editorTheme],
+    );
 
     useEffect(() => {
         editorSessionsRef.current = editorSessions;
@@ -747,6 +771,23 @@ export function AssetBrowserWorkspace({
         window.setTimeout(() => URL.revokeObjectURL(url), 0);
     }
 
+    async function unescapeDownloadBlob(result: DownloadEntryResult): Promise<DownloadEntryResult> {
+        const ct = result.contentType;
+        const isText = ct.startsWith('text/') || ct.includes('json') || ct.includes('yaml') || ct.includes('xml');
+        if (!isText) {
+            return result;
+        }
+        const raw = await result.blob.text();
+        if (!needsLiteralUnescape(raw)) {
+            return result;
+        }
+        const cleaned = unescapeLiteralNewlines(raw);
+        return {
+            ...result,
+            blob: new Blob([cleaned], { type: result.contentType }),
+        };
+    }
+
     async function handleExport(targetPath?: string) {
         if (!selectedVersionId) {
             return;
@@ -769,7 +810,8 @@ export function AssetBrowserWorkspace({
                 versionId: selectedVersionId,
                 path: exportPath,
             });
-            triggerBrowserDownload(result);
+            const cleaned = await unescapeDownloadBlob(result);
+            triggerBrowserDownload(cleaned);
             if (!mountedRef.current) {
                 return;
             }
@@ -894,6 +936,8 @@ export function AssetBrowserWorkspace({
                 style={style}
                 height={height}
                 heading={heading}
+                themeStyle={themeStyle}
+                themeMode={theme}
                 kicker="业务资产浏览"
                 badges={(
                     <>
@@ -1077,6 +1121,7 @@ export function AssetBrowserWorkspace({
                         originalText={diffLeftText}
                         modifiedText={diffRightText}
                         compact
+                        editorTheme={resolvedEditorTheme}
                         onSelectEntry={(path) => setSelectedPath(path)}
                         actions={renderDiffActions ? renderDiffActions(actionContext) : null}
                     />
@@ -1086,6 +1131,7 @@ export function AssetBrowserWorkspace({
                         selectedEntry={selectedEntry}
                         modelPath={currentModelPath}
                         language={editorLanguage}
+                        editorTheme={resolvedEditorTheme}
                         value={editorText}
                         canEdit={canEdit}
                         dirty={dirty}
@@ -1130,16 +1176,18 @@ export function AssetBrowserWorkspace({
     return (
         <section
             className={className}
+            data-stew-theme={theme}
             style={{
                 ...shellStyle,
+                ...themeStyle,
                 height,
                 ...style,
-            }}
+            } as CSSProperties}
         >
             <>
                 <div style={cardHeaderStyle}>
                     <div style={{ display: 'grid', gap: 6 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--stew-ab-muted-fg, #64748b)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                             Stew Asset Workspace
                         </div>
                         <div style={{ fontSize: 22, fontWeight: 700 }}>{heading}</div>
@@ -1164,7 +1212,7 @@ export function AssetBrowserWorkspace({
                     {renderToolbarStart ? renderToolbarStart(actionContext) : null}
 
                     <label style={{ display: 'grid', gap: 6, minWidth: 210 }}>
-                        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Current version</span>
+                        <span style={{ fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)', fontWeight: 600 }}>Current version</span>
                         <select value={selectedVersionId} onChange={(event) => setSelectedVersionId(event.target.value)} style={selectStyle}>
                             {versions.map((version) => (
                                 <option key={version.versionId} value={version.versionId}>
@@ -1175,7 +1223,7 @@ export function AssetBrowserWorkspace({
                     </label>
 
                     <label style={{ display: 'grid', gap: 6, minWidth: 210 }}>
-                        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Compare with</span>
+                        <span style={{ fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)', fontWeight: 600 }}>Compare with</span>
                         <select value={compareVersionId} onChange={(event) => setCompareVersionId(event.target.value)} style={selectStyle}>
                             <option value="">No comparison</option>
                             {versions
@@ -1226,7 +1274,7 @@ export function AssetBrowserWorkspace({
                 <div style={{ flex: 1, minHeight: 0 }}>
                     <Group orientation="horizontal">
                         <Panel defaultSize={24} minSize={18}>
-                            <div style={{ ...sectionStyle, background: 'rgba(255,255,255,0.72)' }}>
+                            <div style={{ ...sectionStyle, background: 'var(--stew-ab-sidebar-bg, rgba(255,255,255,0.72))' }}>
                                 <AssetTree
                                     nodes={treeNodes}
                                     expandedPaths={expandedPaths}
@@ -1274,6 +1322,7 @@ export function AssetBrowserWorkspace({
                                     selectedEntry={selectedEntry}
                                     modelPath={currentModelPath}
                                     language={editorLanguage}
+                                    editorTheme={resolvedEditorTheme}
                                     value={editorText}
                                     canEdit={canEdit}
                                     dirty={dirty}
@@ -1311,7 +1360,7 @@ export function AssetBrowserWorkspace({
                             <>
                                 <Separator style={panelHandleStyle} />
                                 <Panel defaultSize={32} minSize={20}>
-                                    <div style={{ ...sectionStyle, background: '#f8fafc' }}>
+                                    <div style={{ ...sectionStyle, background: 'var(--stew-ab-surface-muted, #f8fafc)' }}>
                                         <AssetDiffViewer
                                             label={diffLabel}
                                             language={editorLanguage}
@@ -1320,6 +1369,7 @@ export function AssetBrowserWorkspace({
                                             selectedPath={selectedPath}
                                             originalText={diffLeftText}
                                             modifiedText={diffRightText}
+                                            editorTheme={resolvedEditorTheme}
                                             onSelectEntry={(path) => setSelectedPath(path)}
                                             actions={renderDiffActions ? renderDiffActions(actionContext) : null}
                                         />
@@ -1331,13 +1381,13 @@ export function AssetBrowserWorkspace({
                 </div>
 
                 {selectedCompareVersion ? (
-                    <div style={{ padding: '10px 18px', borderTop: '1px solid rgba(148,163,184,0.14)', fontSize: 12, color: '#64748b' }}>
+                    <div style={{ padding: '10px 18px', borderTop: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))', fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)' }}>
                         Comparing against {selectedCompareVersion.versionId} when diff mode is enabled.
                     </div>
                 ) : null}
 
                 {renderFooter ? (
-                    <div style={{ padding: '12px 18px', borderTop: '1px solid rgba(148,163,184,0.10)', background: 'rgba(248,250,252,0.92)' }}>
+                    <div style={{ padding: '12px 18px', borderTop: '1px solid var(--stew-ab-border, rgba(148,163,184,0.10))', background: 'var(--stew-ab-footer-bg, rgba(248,250,252,0.92))' }}>
                         {renderFooter(actionContext)}
                     </div>
                 ) : null}

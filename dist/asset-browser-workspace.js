@@ -3,7 +3,7 @@ import React, { startTransition, useEffect, useMemo, useRef, useState, } from 'r
 import { Group as GroupPrimitive, Panel as PanelPrimitive, Separator as SeparatorPrimitive, } from 'react-resizable-panels';
 import { AssetDiffViewer } from './asset-diff-viewer';
 import { AssetEditor } from './asset-editor';
-import { buildTree, buttonBaseStyle, cardHeaderStyle, collectInitialExpanded, languageFor, panelHandleStyle, pill, primaryButtonStyle, sectionStyle, selectStyle, shellStyle, toneStyle, toolbarStyle, } from './asset-browser-shared';
+import { buildTree, buttonBaseStyle, cardHeaderStyle, collectInitialExpanded, languageFor, needsLiteralUnescape, panelHandleStyle, pill, primaryButtonStyle, resolveEditorTheme, resolveThemeVars, sectionStyle, selectStyle, shellStyle, toneStyle, toolbarStyle, unescapeLiteralNewlines, } from './asset-browser-shared';
 import { AssetBrowserConsoleShell } from './asset-browser-console-shell';
 import { AssetTree } from './asset-tree';
 function Group(props) {
@@ -15,7 +15,7 @@ function Panel(props) {
 function Separator(props) {
     return React.createElement(SeparatorPrimitive, props);
 }
-export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVersionId, initialFolder = '/', height = '100%', title, className, style, appearance = 'default', enableEditing = true, defaultDraftDescription = 'Edit assets', callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, }) {
+export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVersionId, initialFolder = '/', height = '100%', title, className, style, appearance = 'default', enableEditing = true, defaultDraftDescription = 'Edit assets', theme = 'light', themeVars, editorTheme, showDecorativeBackground = true, callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, }) {
     const [loading, setLoading] = useState(true);
     const [collection, setCollection] = useState(null);
     const [versions, setVersions] = useState([]);
@@ -48,6 +48,8 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
     const mountedRef = useRef(true);
     const editorSessionsRef = useRef({});
     const isConsole = appearance === 'console';
+    const themeStyle = useMemo(() => resolveThemeVars(theme, themeVars, showDecorativeBackground), [theme, themeVars, showDecorativeBackground]);
+    const resolvedEditorTheme = useMemo(() => resolveEditorTheme(theme, editorTheme), [theme, editorTheme]);
     useEffect(() => {
         editorSessionsRef.current = editorSessions;
     }, [editorSessions]);
@@ -555,6 +557,22 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
         anchor.remove();
         window.setTimeout(() => URL.revokeObjectURL(url), 0);
     }
+    async function unescapeDownloadBlob(result) {
+        const ct = result.contentType;
+        const isText = ct.startsWith('text/') || ct.includes('json') || ct.includes('yaml') || ct.includes('xml');
+        if (!isText) {
+            return result;
+        }
+        const raw = await result.blob.text();
+        if (!needsLiteralUnescape(raw)) {
+            return result;
+        }
+        const cleaned = unescapeLiteralNewlines(raw);
+        return {
+            ...result,
+            blob: new Blob([cleaned], { type: result.contentType }),
+        };
+    }
     async function handleExport(targetPath) {
         if (!selectedVersionId) {
             return;
@@ -571,7 +589,8 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                 versionId: selectedVersionId,
                 path: exportPath,
             });
-            triggerBrowserDownload(result);
+            const cleaned = await unescapeDownloadBlob(result);
+            triggerBrowserDownload(cleaned);
             if (!mountedRef.current) {
                 return;
             }
@@ -680,7 +699,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
     const selectedPathLabel = selectedPath || '请选择资源文件';
     const activeEditorMode = isConsole && consoleView === 'preview' ? 'preview' : 'edit';
     if (isConsole) {
-        return (React.createElement(AssetBrowserConsoleShell, { className: className, style: style, height: height, heading: heading, kicker: "\u4E1A\u52A1\u8D44\u4EA7\u6D4F\u89C8", badges: (React.createElement(React.Fragment, null,
+        return (React.createElement(AssetBrowserConsoleShell, { className: className, style: style, height: height, heading: heading, themeStyle: themeStyle, themeMode: theme, kicker: "\u4E1A\u52A1\u8D44\u4EA7\u6D4F\u89C8", badges: (React.createElement(React.Fragment, null,
                 pill('空间', assetSpace),
                 pill('资产', assetId),
                 pill('模式', isDraftSelected ? '草稿' : '只读'),
@@ -736,7 +755,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                     renderTreeNodeActions ? renderTreeNodeActions(node) : null)) })), mainTitle: selectedPathLabel, mainSubtitle: entryMeta, viewSwitcher: (React.createElement("div", { className: "stew-asset-workspace__console-view-switcher" },
                 React.createElement("button", { type: "button", className: `stew-asset-workspace__console-view-button${consoleView === 'edit' ? ' is-active' : ''}`, onClick: () => setConsoleWorkspaceView('edit') }, "\u7F16\u8F91"),
                 React.createElement("button", { type: "button", className: `stew-asset-workspace__console-view-button${consoleView === 'preview' ? ' is-active' : ''}`, disabled: !canPreviewMarkdown, onClick: () => setConsoleWorkspaceView('preview') }, "\u9884\u89C8"),
-                React.createElement("button", { type: "button", className: `stew-asset-workspace__console-view-button${consoleView === 'diff' ? ' is-active' : ''}`, disabled: !selectedPath, onClick: () => setConsoleWorkspaceView('diff') }, "\u5DEE\u5F02"))), mainContent: consoleView === 'diff' ? (React.createElement(AssetDiffViewer, { label: diffLabel, language: editorLanguage, summary: diffSummary, entries: diffEntries, selectedPath: selectedPath, originalText: diffLeftText, modifiedText: diffRightText, compact: true, onSelectEntry: (path) => setSelectedPath(path), actions: renderDiffActions ? renderDiffActions(actionContext) : null })) : (React.createElement(AssetEditor, { selectedPath: selectedPath, selectedEntry: selectedEntry, modelPath: currentModelPath, language: editorLanguage, value: editorText, canEdit: canEdit, dirty: dirty, saving: saving, entryRevision: entryRevision, openTabs: openTabs, compact: true, mode: activeEditorMode, showModeSwitch: false, onChange: (value) => {
+                React.createElement("button", { type: "button", className: `stew-asset-workspace__console-view-button${consoleView === 'diff' ? ' is-active' : ''}`, disabled: !selectedPath, onClick: () => setConsoleWorkspaceView('diff') }, "\u5DEE\u5F02"))), mainContent: consoleView === 'diff' ? (React.createElement(AssetDiffViewer, { label: diffLabel, language: editorLanguage, summary: diffSummary, entries: diffEntries, selectedPath: selectedPath, originalText: diffLeftText, modifiedText: diffRightText, compact: true, editorTheme: resolvedEditorTheme, onSelectEntry: (path) => setSelectedPath(path), actions: renderDiffActions ? renderDiffActions(actionContext) : null })) : (React.createElement(AssetEditor, { selectedPath: selectedPath, selectedEntry: selectedEntry, modelPath: currentModelPath, language: editorLanguage, editorTheme: resolvedEditorTheme, value: editorText, canEdit: canEdit, dirty: dirty, saving: saving, entryRevision: entryRevision, openTabs: openTabs, compact: true, mode: activeEditorMode, showModeSwitch: false, onChange: (value) => {
                     const nextDirty = value !== originalText;
                     setEditorText(value);
                     setDirty(nextDirty);
@@ -757,15 +776,16 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                     }
                 }, onSave: canEdit ? () => void handleSave() : undefined, onSelectTab: (path) => setSelectedPath(path), onCloseTab: closeEditorTab, actions: renderEditorActions ? renderEditorActions(actionContext) : null })), compareNote: selectedCompareVersion ? `当前对比基线：${selectedCompareVersion.versionId}` : undefined, footer: renderFooter ? renderFooter(actionContext) : undefined }));
     }
-    return (React.createElement("section", { className: className, style: {
+    return (React.createElement("section", { className: className, "data-stew-theme": theme, style: {
             ...shellStyle,
+            ...themeStyle,
             height,
             ...style,
         } },
         React.createElement(React.Fragment, null,
             React.createElement("div", { style: cardHeaderStyle },
                 React.createElement("div", { style: { display: 'grid', gap: 6 } },
-                    React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' } }, "Stew Asset Workspace"),
+                    React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: 'var(--stew-ab-muted-fg, #64748b)', textTransform: 'uppercase', letterSpacing: '0.08em' } }, "Stew Asset Workspace"),
                     React.createElement("div", { style: { fontSize: 22, fontWeight: 700 } }, heading),
                     React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
                         pill('Space', assetSpace),
@@ -778,7 +798,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             React.createElement("div", { style: toolbarStyle },
                 renderToolbarStart ? renderToolbarStart(actionContext) : null,
                 React.createElement("label", { style: { display: 'grid', gap: 6, minWidth: 210 } },
-                    React.createElement("span", { style: { fontSize: 12, color: '#64748b', fontWeight: 600 } }, "Current version"),
+                    React.createElement("span", { style: { fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)', fontWeight: 600 } }, "Current version"),
                     React.createElement("select", { value: selectedVersionId, onChange: (event) => setSelectedVersionId(event.target.value), style: selectStyle }, versions.map((version) => (React.createElement("option", { key: version.versionId, value: version.versionId },
                         version.versionId,
                         " \u00B7 ",
@@ -786,7 +806,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                         version.isActive ? ' · active' : '',
                         version.isDraft ? ' · draft' : ''))))),
                 React.createElement("label", { style: { display: 'grid', gap: 6, minWidth: 210 } },
-                    React.createElement("span", { style: { fontSize: 12, color: '#64748b', fontWeight: 600 } }, "Compare with"),
+                    React.createElement("span", { style: { fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)', fontWeight: 600 } }, "Compare with"),
                     React.createElement("select", { value: compareVersionId, onChange: (event) => setCompareVersionId(event.target.value), style: selectStyle },
                         React.createElement("option", { value: "" }, "No comparison"),
                         versions
@@ -806,7 +826,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             React.createElement("div", { style: { flex: 1, minHeight: 0 } },
                 React.createElement(Group, { orientation: "horizontal" },
                     React.createElement(Panel, { defaultSize: 24, minSize: 18 },
-                        React.createElement("div", { style: { ...sectionStyle, background: 'rgba(255,255,255,0.72)' } },
+                        React.createElement("div", { style: { ...sectionStyle, background: 'var(--stew-ab-sidebar-bg, rgba(255,255,255,0.72))' } },
                             React.createElement(AssetTree, { nodes: treeNodes, expandedPaths: expandedPaths, selectedPath: selectedPath, loading: loading, onSelect: (path) => setSelectedPath(path), onToggle: (path) => {
                                     setExpandedPaths((current) => {
                                         const next = new Set(current);
@@ -827,7 +847,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                     React.createElement(Separator, { style: panelHandleStyle }),
                     React.createElement(Panel, { defaultSize: showDiff ? 44 : 76, minSize: 32 },
                         React.createElement("div", { style: sectionStyle },
-                            React.createElement(AssetEditor, { selectedPath: selectedPath, selectedEntry: selectedEntry, modelPath: currentModelPath, language: editorLanguage, value: editorText, canEdit: canEdit, dirty: dirty, saving: saving, entryRevision: entryRevision, openTabs: openTabs, onChange: (value) => {
+                            React.createElement(AssetEditor, { selectedPath: selectedPath, selectedEntry: selectedEntry, modelPath: currentModelPath, language: editorLanguage, editorTheme: resolvedEditorTheme, value: editorText, canEdit: canEdit, dirty: dirty, saving: saving, entryRevision: entryRevision, openTabs: openTabs, onChange: (value) => {
                                     const nextDirty = value !== originalText;
                                     setEditorText(value);
                                     setDirty(nextDirty);
@@ -850,13 +870,13 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                     showDiff ? (React.createElement(React.Fragment, null,
                         React.createElement(Separator, { style: panelHandleStyle }),
                         React.createElement(Panel, { defaultSize: 32, minSize: 20 },
-                            React.createElement("div", { style: { ...sectionStyle, background: '#f8fafc' } },
-                                React.createElement(AssetDiffViewer, { label: diffLabel, language: editorLanguage, summary: diffSummary, entries: diffEntries, selectedPath: selectedPath, originalText: diffLeftText, modifiedText: diffRightText, onSelectEntry: (path) => setSelectedPath(path), actions: renderDiffActions ? renderDiffActions(actionContext) : null }))))) : null)),
-            selectedCompareVersion ? (React.createElement("div", { style: { padding: '10px 18px', borderTop: '1px solid rgba(148,163,184,0.14)', fontSize: 12, color: '#64748b' } },
+                            React.createElement("div", { style: { ...sectionStyle, background: 'var(--stew-ab-surface-muted, #f8fafc)' } },
+                                React.createElement(AssetDiffViewer, { label: diffLabel, language: editorLanguage, summary: diffSummary, entries: diffEntries, selectedPath: selectedPath, originalText: diffLeftText, modifiedText: diffRightText, editorTheme: resolvedEditorTheme, onSelectEntry: (path) => setSelectedPath(path), actions: renderDiffActions ? renderDiffActions(actionContext) : null }))))) : null)),
+            selectedCompareVersion ? (React.createElement("div", { style: { padding: '10px 18px', borderTop: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))', fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)' } },
                 "Comparing against ",
                 selectedCompareVersion.versionId,
                 " when diff mode is enabled.")) : null,
-            renderFooter ? (React.createElement("div", { style: { padding: '12px 18px', borderTop: '1px solid rgba(148,163,184,0.10)', background: 'rgba(248,250,252,0.92)' } }, renderFooter(actionContext))) : null)));
+            renderFooter ? (React.createElement("div", { style: { padding: '12px 18px', borderTop: '1px solid var(--stew-ab-border, rgba(148,163,184,0.10))', background: 'var(--stew-ab-footer-bg, rgba(248,250,252,0.92))' } }, renderFooter(actionContext))) : null)));
 }
 function filterTreeNodes(nodes, query) {
     const normalizedQuery = query.trim().toLowerCase();

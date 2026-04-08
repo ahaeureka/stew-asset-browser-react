@@ -1,5 +1,5 @@
 import React, { type CSSProperties, type ReactNode } from 'react';
-import { type WorkspaceTone } from './asset-browser-shared';
+import { type AssetBrowserThemeMode, type WorkspaceTone } from './asset-browser-shared';
 import './asset-browser-console.css';
 interface AssetBrowserConsoleShellStatus {
     tone: WorkspaceTone;
@@ -10,6 +10,8 @@ export interface AssetBrowserConsoleShellProps {
     style?: CSSProperties;
     height?: number | string;
     heading: ReactNode;
+    themeStyle?: Record<string, string>;
+    themeMode?: AssetBrowserThemeMode;
     kicker?: ReactNode;
     badges?: ReactNode;
     controls?: ReactNode;
@@ -28,5 +30,5 @@ export interface AssetBrowserConsoleShellProps {
     compareNote?: ReactNode;
     footer?: ReactNode;
 }
-export declare function AssetBrowserConsoleShell({ className, style, height, heading, kicker, badges, controls, actions, status, sidebarTitle, sidebarSubtitle, sidebarActions, sidebarCardTitle, sidebarCardBody, sidebarContent, mainTitle, mainSubtitle, viewSwitcher, mainContent, compareNote, footer, }: AssetBrowserConsoleShellProps): React.JSX.Element;
+export declare function AssetBrowserConsoleShell({ className, style, height, heading, themeStyle, themeMode, kicker, badges, controls, actions, status, sidebarTitle, sidebarSubtitle, sidebarActions, sidebarCardTitle, sidebarCardBody, sidebarContent, mainTitle, mainSubtitle, viewSwitcher, mainContent, compareNote, footer, }: AssetBrowserConsoleShellProps): React.JSX.Element;
 export {};

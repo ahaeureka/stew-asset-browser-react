@@ -287,8 +287,10 @@ async function handleExport() {
 | `className` | `string` | 否 | 无 | 外层容器 class | 接入业务样式系统时使用 |
 | `style` | `CSSProperties` | 否 | 无 | 外层容器内联样式 | 调整宽高、圆角、阴影 |
 | `enableEditing` | `boolean` | 否 | `true` | 是否允许草稿编辑 | 只读审阅页可传 `false` |
-| `defaultDraftDescription` | `string` | 否 | `Edit assets` | 点击“Create draft”时默认带上的说明 | `"审批后修改配置"` |
-
+| `defaultDraftDescription` | `string` | 否 | `Edit assets` | 点击“Create draft”时默认带上的说明 | `"审批后修改配置"` || `theme` | `'light' \| 'dark' \| 'inherit'` | 否 | `'light'` | 主题模式 | inherit 模式下完全跟随宿主 CSS 变量 |
+| `themeVars` | `Partial<AssetBrowserThemeVars>` | 否 | 无 | 覆盖默认 token，传入 CSS 变量值 | `{ '--stew-ab-bg': 'var(--background)' }` |
+| `editorTheme` | `'vs' \| 'vs-dark' \| string` | 否 | 自动跟随 `theme` | Monaco 编辑器主题 | `'vs-dark'` |
+| `showDecorativeBackground` | `boolean` | 否 | `true` | 是否显示装饰性渐变背景 | 嵌入宿主时建议 `false` |
 ### 版本 ID 语义
 
 - `initialVersionId`、`selectedVersionId`、`compareVersionId`、`draftVersionId`、`collection.activeVersionId` 都是业务版本号
@@ -804,6 +806,62 @@ export default function CustomAssetLayout() {
   );
 }
 ```
+
+## 主题与宿主设计系统集成
+
+SDK 支持三种主题模式，通过 `theme` prop 控制：
+
+- `light`（默认）：使用内置浅色 token
+- `dark`：使用内置暗色 token
+- `inherit`：使用浅色默认值，但允许宿主通过 `themeVars` 完全接管配色
+
+### 基本用法
+
+```tsx
+// 暗色模式
+<AssetBrowserConsoleWorkspace
+  client={client}
+  assetSpace="skills"
+  assetId="my-skill"
+  theme="dark"
+  editorTheme="vs-dark"
+/>
+```
+
+### 对接宿主设计系统
+
+```tsx
+// 完全跟随宿主系统的 CSS 变量
+<AssetBrowserConsoleWorkspace
+  client={client}
+  assetSpace="skills"
+  assetId="my-skill"
+  theme="inherit"
+  editorTheme="vs-dark"
+  showDecorativeBackground={false}
+  themeVars={{
+    "--stew-ab-bg": "var(--background)",
+    "--stew-ab-fg": "var(--foreground)",
+    "--stew-ab-border": "var(--border)",
+    "--stew-ab-surface": "var(--background)",
+    "--stew-ab-surface-muted": "var(--background-secondary)",
+    "--stew-ab-sidebar-bg": "var(--background-secondary)",
+    "--stew-ab-accent": "var(--color-primary)",
+  }}
+/>
+```
+
+### 关闭装饰渐变
+
+默认根容器在浅色模式下会渲染微弱的 teal/blue 装饰渐变。当 SDK 嵌入宿主页面时，可通过 `showDecorativeBackground={false}` 禁用，避免与宿主背景冲突。
+
+### Monaco 编辑器主题
+
+`editorTheme` 默认跟随 `theme`：light 对应 `vs`，dark 对应 `vs-dark`。可以显式传入任意 Monaco 内置或自定义主题名。
+
+### CSS 变量清单
+
+所有 surface 使用 `--stew-ab-*` 前缀的 CSS 变量驱动。完整列表见 `AssetBrowserThemeVars` 类型定义。
 
 ## Dashboard 示例
 

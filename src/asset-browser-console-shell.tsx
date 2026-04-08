@@ -1,7 +1,7 @@
 "use client";
 
 import React, { type CSSProperties, type ReactNode } from 'react';
-import { shellStyle, type WorkspaceTone } from './asset-browser-shared';
+import { shellStyle, type AssetBrowserThemeMode, type WorkspaceTone } from './asset-browser-shared';
 import './asset-browser-console.css';
 
 interface AssetBrowserConsoleShellStatus {
@@ -14,6 +14,8 @@ export interface AssetBrowserConsoleShellProps {
     style?: CSSProperties;
     height?: number | string;
     heading: ReactNode;
+    themeStyle?: Record<string, string>;
+    themeMode?: AssetBrowserThemeMode;
     kicker?: ReactNode;
     badges?: ReactNode;
     controls?: ReactNode;
@@ -38,6 +40,8 @@ export function AssetBrowserConsoleShell({
     style,
     height = '100%',
     heading,
+    themeStyle,
+    themeMode,
     kicker,
     badges,
     controls,
@@ -59,11 +63,13 @@ export function AssetBrowserConsoleShell({
     return (
         <section
             className={joinClassNames('stew-asset-workspace', 'stew-asset-workspace--console', className)}
+            data-stew-theme={themeMode}
             style={{
                 ...shellStyle,
+                ...themeStyle,
                 height,
                 ...style,
-            }}
+            } as CSSProperties}
         >
             <div className="stew-asset-workspace__console-topbar">
                 <div className="stew-asset-workspace__console-titleblock">

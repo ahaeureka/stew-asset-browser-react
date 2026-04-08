@@ -13,6 +13,7 @@ export interface AssetEditorProps {
     selectedEntry: AssetTreeEntry | null;
     modelPath?: string;
     language: string;
+    editorTheme?: string;
     value: string;
     canEdit: boolean;
     dirty: boolean;
@@ -28,5 +29,5 @@ export interface AssetEditorProps {
     mode?: AssetEditorMode;
     showModeSwitch?: boolean;
 }
-export declare function AssetEditor({ selectedPath, selectedEntry, modelPath, language, value, canEdit, dirty, saving, entryRevision, openTabs, onChange, onSave, onSelectTab, onCloseTab, actions, compact, mode, showModeSwitch, }: AssetEditorProps): React.JSX.Element;
+export declare function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme, value, canEdit, dirty, saving, entryRevision, openTabs, onChange, onSave, onSelectTab, onCloseTab, actions, compact, mode, showModeSwitch, }: AssetEditorProps): React.JSX.Element;
 export {};

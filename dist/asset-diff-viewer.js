@@ -2,7 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
 import { buttonBaseStyle, EmptyMessage, monoFont, pill, subHeaderStyle, } from './asset-browser-shared';
-export function AssetDiffViewer({ label, language, summary, entries, selectedPath, originalText, modifiedText, onSelectEntry, actions, compact = false, }) {
+export function AssetDiffViewer({ label, language, summary, entries, selectedPath, originalText, modifiedText, onSelectEntry, actions, compact = false, editorTheme = 'vs', }) {
     const [renderSideBySide, setRenderSideBySide] = useState(true);
     const [ignoreTrimWhitespace, setIgnoreTrimWhitespace] = useState(true);
     const [hideUnchangedRegions, setHideUnchangedRegions] = useState(true);
@@ -23,7 +23,7 @@ export function AssetDiffViewer({ label, language, summary, entries, selectedPat
     const handleDiffMount = (editor) => {
         diffEditorRef.current = editor;
     };
-    return (React.createElement("div", { style: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#f8fafc' } },
+    return (React.createElement("div", { style: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'var(--stew-ab-surface-muted, #f8fafc)' } },
         React.createElement("div", { style: headerStyle },
             React.createElement("div", { style: { display: 'grid', gap: 3 } },
                 React.createElement("span", { style: { fontWeight: 700 } }, "\u5DEE\u5F02"),
@@ -55,7 +55,7 @@ export function AssetDiffViewer({ label, language, summary, entries, selectedPat
             formatDiffChangeType(entry.changeType),
             " \u00B7 ",
             entry.path))))) : null,
-        React.createElement("div", { style: { flex: 1, minHeight: 0 } }, originalText || modifiedText ? (React.createElement(DiffEditor, { height: "100%", language: language, originalModelPath: `file:///stew/diff/original${selectedPath || '/untitled'}`, modifiedModelPath: `file:///stew/diff/modified${selectedPath || '/untitled'}`, keepCurrentOriginalModel: true, keepCurrentModifiedModel: true, theme: "vs-light", original: originalText, modified: modifiedText, onMount: handleDiffMount, options: {
+        React.createElement("div", { style: { flex: 1, minHeight: 0 } }, originalText || modifiedText ? (React.createElement(DiffEditor, { height: "100%", language: language, originalModelPath: `file:///stew/diff/original${selectedPath || '/untitled'}`, modifiedModelPath: `file:///stew/diff/modified${selectedPath || '/untitled'}`, keepCurrentOriginalModel: true, keepCurrentModifiedModel: true, theme: editorTheme, original: originalText, modified: modifiedText, onMount: handleDiffMount, options: {
                 readOnly: true,
                 minimap: { enabled: false },
                 automaticLayout: true,
