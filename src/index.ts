@@ -26,6 +26,7 @@ export {
 } from './asset-diff-viewer.js';
 export type {
     AssetBrowserActionContext,
+    AssetBrowserWorkspaceActions,
     AssetBrowserWorkspaceCallbacks,
     AssetBrowserWorkspaceState,
     AssetBrowserThemeMode,

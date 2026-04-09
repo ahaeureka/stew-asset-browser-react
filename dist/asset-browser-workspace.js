@@ -59,7 +59,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             mountedRef.current = false;
         };
     }, []);
-    function createActionContext(overrides = {}) {
+    function createActionContext(overrides = {}, includeActions = false) {
         const nextCollection = overrides.collection ?? collection;
         const nextVersions = overrides.versions ?? versions;
         const nextSelectedVersionId = overrides.selectedVersionId ?? selectedVersionId;
@@ -69,7 +69,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             ?? treeEntries.find((item) => item.path === nextSelectedPath)
             ?? selectedEntry
             ?? null;
-        return {
+        const ctx = {
             assetSpace,
             assetId,
             collection: nextCollection,
@@ -83,6 +83,25 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             loading: overrides.loading ?? loading,
             showDiff: overrides.showDiff ?? showDiff,
             status: overrides.status ?? status,
+        };
+        if (includeActions) {
+            ctx.workspaceActions = createWorkspaceActions();
+        }
+        return ctx;
+    }
+    function createWorkspaceActions() {
+        return {
+            async refreshWorkspace() {
+                await loadWorkspace();
+            },
+            selectVersion(versionId) {
+                setSelectedVersionId(versionId);
+            },
+            clearDraftState() {
+                setDiffVisible(false);
+                setDirty(false);
+                setEditorSessions({});
+            },
         };
     }
     useEffect(() => {
@@ -414,7 +433,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
     }
     async function handleCreateDraft() {
         await runAction(async () => {
-            const currentContext = createActionContext();
+            const currentContext = createActionContext({}, true);
             if (!(await allowAction(callbacks?.onBeforeCreateDraft, currentContext))) {
                 return;
             }
@@ -440,7 +459,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             return;
         }
         await runAction(async () => {
-            const currentContext = createActionContext();
+            const currentContext = createActionContext({}, true);
             if (!(await allowAction(callbacks?.onBeforeDiscardDraft, currentContext))) {
                 return;
             }
@@ -465,7 +484,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             return;
         }
         await runAction(async () => {
-            const currentContext = createActionContext();
+            const currentContext = createActionContext({}, true);
             if (!(await allowAction(callbacks?.onBeforePublishDraft, currentContext))) {
                 return;
             }

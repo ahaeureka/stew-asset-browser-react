@@ -590,11 +590,11 @@ return target ? (
 | `onDirtyChange` | `context` | `void \| Promise<void>` | 编辑器脏状态变化时 | 离开页面前提醒 |
 | `onDiffVisibilityChange` | `(visible, context)` | `void \| Promise<void>` | Diff 面板显示状态变化时 | 埋点或切换外部布局 |
 | `onStatusChange` | `(status, context)` | `void \| Promise<void>` | 顶部状态文案变化时 | 页面外部同步 toast |
-| `onBeforeCreateDraft` | `context` | `boolean \| void \| Promise<boolean \| void>` | 创建草稿前 | 权限校验、确认框 |
+| `onBeforeCreateDraft` | `context` | `boolean \| void \| Promise<boolean \| void>` | 创建草稿前 | 权限校验、确认框；`context.workspaceActions` 可用 |
 | `onAfterCreateDraft` | `(result, context)` | `void \| Promise<void>` | 草稿创建后 | 记录草稿号、发通知 |
-| `onBeforeDiscardDraft` | `context` | `boolean \| void \| Promise<boolean \| void>` | 丢弃草稿前 | 二次确认 |
+| `onBeforeDiscardDraft` | `context` | `boolean \| void \| Promise<boolean \| void>` | 丢弃草稿前 | 二次确认；`context.workspaceActions` 可用 |
 | `onAfterDiscardDraft` | `context` | `void \| Promise<void>` | 丢弃草稿后 | 刷新外部审批状态 |
-| `onBeforePublishDraft` | `context` | `boolean \| void \| Promise<boolean \| void>` | 发布草稿前 | 发布确认、风险校验 |
+| `onBeforePublishDraft` | `context` | `boolean \| void \| Promise<boolean \| void>` | 发布草稿前 | 发布确认、风险校验；`context.workspaceActions` 可用 |
 | `onAfterPublishDraft` | `(result, context)` | `void \| Promise<void>` | 发布成功后 | 刷新业务详情页 |
 | `onBeforeSave` | `(text, context)` | `boolean \| void \| Promise<boolean \| void>` | 保存前 | 自定义校验、格式检查 |
 | `onAfterSave` | `(result, context)` | `void \| Promise<void>` | 保存成功后 | 同步触发工作流 |
@@ -605,6 +605,7 @@ return target ? (
 - 回调可以是异步函数。
 - `context` 里会带上当前 `assetSpace`、`assetId`、`selectedPath`、`draftVersionId`、`selectedVersion`、`showDiff` 等运行时信息。
 - `context` 中出现的所有版本相关字段也都是业务版本号。
+- `onBefore...` 回调的 `context` 中额外包含 `workspaceActions`，可用于在拦截默认行为后主动刷新工作台状态（见下方"宿主接管发布流程"）。
 
 ### 回调示例 1：保存前做业务校验
 

@@ -65,6 +65,17 @@ export interface AssetBrowserActionContext {
     loading: boolean;
     showDiff: boolean;
     status: StatusMessage | null;
+    /** Imperative actions for workspace state control. Available in onBefore* callbacks. */
+    workspaceActions?: AssetBrowserWorkspaceActions;
+}
+/** Workspace control actions exposed in onBefore* callback contexts. */
+export interface AssetBrowserWorkspaceActions {
+    /** Reload collection, versions, and tree from the server. */
+    refreshWorkspace: () => Promise<void>;
+    /** Switch the selected version. Triggers tree reload via the version-change effect. */
+    selectVersion: (versionId: string) => void;
+    /** Clear diff visibility, reset dirty state, and clear editor sessions. */
+    clearDraftState: () => void;
 }
 type MaybePromise<T> = T | Promise<T>;
 export interface AssetBrowserWorkspaceCallbacks {
