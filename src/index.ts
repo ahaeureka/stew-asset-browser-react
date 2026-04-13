@@ -1,8 +1,12 @@
 export {
     AssetBrowserWorkspace,
     type AssetBrowserWorkspaceProps,
-    type AssetBrowserWorkspaceAppearance,
+    type AssetBrowserManagedWorkspaceProps,
 } from './asset-browser-workspace.js';
+export {
+    AssetBrowserReadonly,
+    type AssetBrowserReadonlyProps,
+} from './asset-browser-readonly.js';
 export {
     AssetBrowserConsoleWorkspace,
     type AssetBrowserConsoleWorkspaceProps,
@@ -26,12 +30,19 @@ export {
 } from './asset-diff-viewer.js';
 export type {
     AssetBrowserActionContext,
+    AssetBrowserMode,
+    AssetBrowserWorkspaceAppearance,
     AssetBrowserWorkspaceActions,
     AssetBrowserWorkspaceCallbacks,
     AssetBrowserWorkspaceState,
     AssetBrowserThemeMode,
     AssetBrowserEditorTheme,
     AssetBrowserThemeVars,
+    PreviewContext,
+    PreviewDocument,
+    PreviewFileKind,
+    PreviewMode,
+    PreviewTreeNode,
     StatusMessage,
     TreeNode,
     WorkspaceTone,

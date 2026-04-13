@@ -18,7 +18,7 @@ import {
     unescapeLiteralNewlines,
 } from './asset-browser-shared';
 
-type EditorMode = 'edit' | 'preview';
+type EditorMode = 'edit' | 'preview' | 'split';
 
 export type AssetEditorMode = EditorMode;
 
@@ -678,6 +678,7 @@ export interface AssetEditorProps {
     compact?: boolean;
     mode?: AssetEditorMode;
     showModeSwitch?: boolean;
+    showBuiltinActions?: boolean;
 }
 
 export function AssetEditor({
@@ -701,6 +702,7 @@ export function AssetEditor({
     compact = false,
     mode,
     showModeSwitch = true,
+    showBuiltinActions = true,
 }: AssetEditorProps) {
     const [internalMode, setInternalMode] = useState<EditorMode>('edit');
     const [copied, setCopied] = useState(false);
@@ -1127,14 +1129,14 @@ export function AssetEditor({
                     ) : null}
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    {activeMode === 'edit' && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable ? (
+                    {showBuiltinActions && activeMode !== 'preview' && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable ? (
                         <>
                             <button type="button" style={compactActionStyle} onClick={() => void runEditorAction('actions.find')}>查找</button>
                             <button type="button" style={compactActionStyle} onClick={() => void runEditorAction('editor.action.startFindReplaceAction')}>替换</button>
                             <button type="button" style={compactActionStyle} disabled={!canEdit} onClick={() => void handleFormatRequest()}>格式化</button>
                         </>
                     ) : null}
-                    {selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable && displayValue ? (
+                    {showBuiltinActions && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable && displayValue ? (
                         <button type="button" style={compactActionStyle} onClick={() => void handleCopyAll()}>
                             {copied ? '已复制' : '复制'}
                         </button>
@@ -1143,6 +1145,7 @@ export function AssetEditor({
                         <div style={{ display: 'inline-flex', gap: 2, background: 'rgba(148,163,184,0.10)', borderRadius: 10, padding: 2 }}>
                             <button type="button" style={tabStyle(activeMode === 'edit')} onClick={() => setInternalMode('edit')}>编辑</button>
                             <button type="button" style={tabStyle(activeMode === 'preview')} onClick={() => setInternalMode('preview')}>预览</button>
+                            <button type="button" style={tabStyle(activeMode === 'split')} onClick={() => setInternalMode('split')}>分栏</button>
                         </div>
                     ) : null}
                     {actions}
@@ -1166,6 +1169,56 @@ export function AssetEditor({
                             </Markdown>
                         </div>
                     </article>
+                </div>
+            ) : activeMode === 'split' && isMarkdown ? (
+                <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'minmax(0, 1fr) minmax(0, 1fr)', flex: 1, minHeight: 0 }}>
+                    <div style={{ minWidth: 0, minHeight: 0, borderRight: compact ? 'none' : '1px solid rgba(148,163,184,0.12)' }}>
+                        <Editor
+                            height="100%"
+                            defaultLanguage="plaintext"
+                            path={modelPath}
+                            language={language}
+                            theme={editorTheme}
+                            value={displayValue}
+                            onMount={handleEditorMount}
+                            onChange={(next) => onChange(next ?? '')}
+                            saveViewState
+                            keepCurrentModel
+                            options={{
+                                readOnly: !canEdit,
+                                minimap: { enabled: false },
+                                smoothScrolling: true,
+                                fontSize: compact ? 12 : 13,
+                                fontFamily: monoFont,
+                                wordWrap: 'on',
+                                automaticLayout: true,
+                                formatOnPaste: canEdit,
+                                formatOnType: canEdit,
+                                scrollBeyondLastLine: false,
+                                contextmenu: true,
+                                padding: compact ? { top: 10, bottom: 14 } : { top: 16, bottom: 24 },
+                                guides: { indentation: true },
+                                find: {
+                                    addExtraSpaceOnTop: false,
+                                    autoFindInSelection: 'multiline',
+                                    seedSearchStringFromSelection: 'selection',
+                                },
+                            }}
+                        />
+                    </div>
+                    <div ref={previewScrollRef} style={{ ...markdownPreviewContainerStyle, borderTop: compact ? '1px solid rgba(148,163,184,0.12)' : 'none' }}>
+                        {markdownOutline.length > 0 ? renderOutlineNav() : null}
+                        <article style={markdownPreviewDocumentStyle}>
+                            <div ref={previewRootRef}>
+                                {frontmatter && frontmatter.fields.length > 0 ? (
+                                    <FrontmatterBlock fields={frontmatter.fields} />
+                                ) : null}
+                                <Markdown remarkPlugins={[remarkGfm, remarkFrontmatter]} components={markdownComponents}>
+                                    {markdownBody}
+                                </Markdown>
+                            </div>
+                        </article>
+                    </div>
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>

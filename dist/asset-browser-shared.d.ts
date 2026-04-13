@@ -2,6 +2,24 @@ import React, { type CSSProperties, type ReactNode } from 'react';
 import type { AssetCollection, DownloadEntryResult, AssetTreeEntry, AssetVersionSummary, CreateDraftResult, PublishResult, SaveTextResult } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
 export type AssetBrowserThemeMode = 'light' | 'dark' | 'inherit';
 export type AssetBrowserEditorTheme = 'vs' | 'vs-dark' | (string & {});
+export type AssetBrowserWorkspaceAppearance = 'default' | 'console';
+export type AssetBrowserMode = 'workspace' | 'browse-preview';
+export type PreviewFileKind = 'markdown' | 'json' | 'text' | 'yaml' | 'python' | (string & {});
+export type PreviewMode = 'rendered' | 'source' | 'split';
+export interface PreviewTreeNode {
+    path: string;
+    name: string;
+    isDirectory: boolean;
+    sizeBytes?: number;
+    fileKind?: PreviewFileKind;
+    children?: PreviewTreeNode[];
+}
+export interface PreviewDocument {
+    path: string;
+    fileKind: PreviewFileKind;
+    content: string;
+    sizeBytes?: number;
+}
 export interface AssetBrowserThemeVars {
     '--stew-ab-bg': string;
     '--stew-ab-fg': string;
@@ -38,6 +56,15 @@ export interface TreeNode {
     children: TreeNode[];
     isDirectory: boolean;
 }
+export interface PreviewContext {
+    selectedPath: string;
+    selectedNode: PreviewTreeNode | null;
+    document: PreviewDocument | null;
+    previewMode: PreviewMode;
+    availablePreviewModes: PreviewMode[];
+    loading: boolean;
+    setPreviewMode: (mode: PreviewMode) => void;
+}
 export interface AssetBrowserWorkspaceState {
     collection: AssetCollection | null;
     versions: AssetVersionSummary[];
@@ -70,11 +97,11 @@ export interface AssetBrowserActionContext {
 }
 /** Workspace control actions exposed in onBefore* callback contexts. */
 export interface AssetBrowserWorkspaceActions {
-    /** Reload collection, versions, and tree from the server. */
+    /** Reload collection, versions, and tree from the server while preserving valid selections when possible. */
     refreshWorkspace: () => Promise<void>;
     /** Switch the selected version. Triggers tree reload via the version-change effect. */
     selectVersion: (versionId: string) => void;
-    /** Clear diff visibility, reset dirty state, and clear editor sessions. */
+    /** Clear diff visibility, reset dirty state, and clear cached editor sessions/tabs. */
     clearDraftState: () => void;
 }
 type MaybePromise<T> = T | Promise<T>;

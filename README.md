@@ -5,6 +5,7 @@ Stew 业务资产浏览 React UI SDK。
 面向业务前端提供两层能力：
 
 - `AssetBrowserWorkspace`：默认风格的完整工作台，内置文件树、Monaco 编辑器、Diff、草稿创建/保存/发布流程
+- `AssetBrowserWorkspace mode="browse-preview"`：只读浏览/预览模式，可直接接收虚拟目录树与文档内容，不依赖 workspace 后端
 - `AssetBrowserConsoleWorkspace`：直接复用 preview 页那套更偏业务控制台风格的成品工作台
 - `AssetTree`、`AssetEditor`、`AssetDiffViewer`：便于业务侧按需组合的细粒度组件
 
@@ -26,6 +27,8 @@ Stew 业务资产浏览 React UI SDK。
 当前这套 UI SDK 文档按已经落地的后端资产接口编写，不按 proto 里的预留字段做超前描述。
 
 业务前端如果需要一份面向接入和升级的说明，请直接看 [docs/业务侧接入升级指引-20260407.md](docs/%E4%B8%9A%E5%8A%A1%E4%BE%A7%E6%8E%A5%E5%85%A5%E5%8D%87%E7%BA%A7%E6%8C%87%E5%BC%95-20260407.md)。
+
+如果你的接入场景需要业务系统先生成版本号、再驱动资产浏览器完成发布与状态同步，另见 [docs/业务侧接入升级指引-20260410.md](docs/%E4%B8%9A%E5%8A%A1%E4%BE%A7%E6%8E%A5%E5%85%A5%E5%8D%87%E7%BA%A7%E6%8C%87%E5%BC%95-20260410.md)。
 
 ## 本地效果预览
 
@@ -134,6 +137,143 @@ export default function AssetConsolePage() {
   assetSpace="configs"
   assetId="gateway-routing"
   appearance="console"
+/>
+```
+
+## 只读浏览 / 预览模式
+
+当你的页面只是要浏览目录树和预览文件，而不需要草稿、发布、版本编辑或后端 workspace client 时，可以直接把 `AssetBrowserWorkspace` 切到 `browse-preview` 模式。
+
+这个模式的设计目标是：
+
+- 不依赖 `AssetBrowserClient`
+- 不要求 draft/version 上下文
+- 支持静态文档或按路径懒加载文档
+- Markdown 支持 `rendered / source / split` 三种查看方式
+
+### 最小示例
+
+```tsx
+"use client";
+
+import {
+  AssetBrowserWorkspace,
+  type PreviewDocument,
+  type PreviewTreeNode,
+} from "stew-asset-browser-react";
+
+const tree: PreviewTreeNode[] = [
+  {
+    path: "/docs",
+    name: "docs",
+    isDirectory: true,
+    children: [
+      {
+        path: "/docs/README.md",
+        name: "README.md",
+        isDirectory: false,
+        fileKind: "markdown",
+      },
+      {
+        path: "/docs/schema.json",
+        name: "schema.json",
+        isDirectory: false,
+        fileKind: "json",
+      },
+    ],
+  },
+];
+
+const documents: Record<string, PreviewDocument> = {
+  "/docs/README.md": {
+    path: "/docs/README.md",
+    fileKind: "markdown",
+    content: "# Public Skill Snapshot\n\nThis page is rendered in readonly mode.",
+  },
+  "/docs/schema.json": {
+    path: "/docs/schema.json",
+    fileKind: "json",
+    content: JSON.stringify({ version: 1, mode: "readonly" }, null, 2),
+  },
+};
+
+export default function PublicSkillPage() {
+  return (
+    <AssetBrowserWorkspace
+      mode="browse-preview"
+      appearance="console"
+      title="公开导出预览"
+      tree={tree}
+      documents={documents}
+      defaultPreviewMode="rendered"
+      height="calc(100vh - 96px)"
+    />
+  );
+}
+```
+
+### 懒加载文档
+
+如果文档内容不想一次性全量传入，也可以只传树，再按路径懒加载：
+
+```tsx
+<AssetBrowserWorkspace
+  mode="browse-preview"
+  tree={tree}
+  onOpenDocument={async (path) => {
+    const response = await fetch(`/api/public-assets?path=${encodeURIComponent(path)}`);
+    const payload = await response.json();
+    return {
+      path,
+      fileKind: payload.fileKind,
+      content: payload.content,
+    };
+  }}
+/>
+```
+
+### 只读模式 API
+
+```ts
+type AssetBrowserMode = "workspace" | "browse-preview"
+
+type PreviewMode = "rendered" | "source" | "split"
+
+interface PreviewTreeNode {
+  path: string
+  name: string
+  isDirectory: boolean
+  sizeBytes?: number
+  fileKind?: "markdown" | "json" | "text" | "yaml" | "python"
+  children?: PreviewTreeNode[]
+}
+
+interface PreviewDocument {
+  path: string
+  fileKind: string
+  content: string
+}
+```
+
+`browse-preview` 额外支持的核心 props：
+
+- `tree`：只读目录树
+- `documents`：静态文档字典
+- `onOpenDocument(path)`：按路径懒加载文档
+- `defaultPreviewMode`：默认查看模式
+- `previewModes`：限制可切换的预览模式
+- `renderTreeNodeMeta`：自定义树节点右侧 meta
+- `renderPreviewToolbar`：自定义预览工具栏扩展区
+- `renderDocument`：自定义文件渲染器
+
+如果你只是想直接拿控制台式只读浏览器，也可以用：
+
+```tsx
+<AssetBrowserConsoleWorkspace
+  mode="browse-preview"
+  title="分享页只读预览"
+  tree={tree}
+  documents={documents}
 />
 ```
 
@@ -606,6 +746,73 @@ return target ? (
 - `context` 里会带上当前 `assetSpace`、`assetId`、`selectedPath`、`draftVersionId`、`selectedVersion`、`showDiff` 等运行时信息。
 - `context` 中出现的所有版本相关字段也都是业务版本号。
 - `onBefore...` 回调的 `context` 中额外包含 `workspaceActions`，可用于在拦截默认行为后主动刷新工作台状态（见下方"宿主接管发布流程"）。
+
+### 宿主接管发布流程
+
+从这一版开始，`onBeforePublishDraft` 的 `context.workspaceActions` 暴露了工作台级动作，允许宿主在阻止默认发布后，自己完成业务编排，再把 SDK 内部状态切到新版本。
+
+适用场景：
+
+- 业务系统先生成自己的版本号，再把它作为 `versionId` 传给资产发布接口
+- 发布前还要写业务数据库、提交审批单、生成审计记录或触发其他编排步骤
+- 发布成功后，希望工作台直接刷新到新版本，而不是通过 remount 整个组件来强制重建状态
+
+当前可用动作如下：
+
+| 动作 | 类型 | 用途 |
+|------|------|------|
+| `refreshWorkspace` | `() => Promise<void>` | 重新拉取 collection、versions 和当前版本树；若当前选版仍存在，会尽量保留 |
+| `selectVersion` | `(versionId: string) => void` | 切换到指定业务版本，触发树和编辑区重载 |
+| `clearDraftState` | `() => void` | 关闭 Diff、清空脏状态、清理编辑器缓存和标签页 |
+
+推荐顺序：
+
+1. 在 `onBeforePublishDraft` 中先完成宿主自己的业务编排
+2. 调用业务后端发布 draft，并把宿主生成的业务版本号作为 `versionId` 传给发布接口
+3. 调用 `refreshWorkspace()` 拉取最新 collection 和版本列表
+4. 调用 `selectVersion(newVersionId)` 切到刚发布出的版本
+5. 调用 `clearDraftState()` 清理发布前的编辑态和 Diff
+6. 返回 `false`，阻止 SDK 再走一次默认 publish
+
+示例：
+
+```tsx
+<AssetBrowserWorkspace
+  client={client}
+  assetSpace="skills"
+  assetId={skillId}
+  callbacks={{
+    onBeforePublishDraft: async (context) => {
+      const actions = context.workspaceActions;
+      if (!actions || !context.draftVersionId) {
+        return false;
+      }
+
+      const businessVersionId = await createBusinessVersionId();
+
+      await fetch(`/api/skills/${context.assetId}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          draftVersionId: context.draftVersionId,
+          versionId: businessVersionId,
+        }),
+      });
+
+      await actions.refreshWorkspace();
+      actions.selectVersion(businessVersionId);
+      actions.clearDraftState();
+      return false;
+    },
+  }}
+/>
+```
+
+说明：
+
+- `versionId` 仍然由宿主业务系统决定，SDK 不负责生成业务版本号
+- 若宿主没有返回 `false`，SDK 仍会继续走默认发布流程
+- `onAfterPublishDraft` 只会在 SDK 默认发布成功后触发；如果发布完全由宿主接管，请在 `onBeforePublishDraft` 内自行处理宿主侧后续逻辑
 
 ### 回调示例 1：保存前做业务校验
 

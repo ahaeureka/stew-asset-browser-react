@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react';
 import type { AssetTreeEntry } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
-type EditorMode = 'edit' | 'preview';
+type EditorMode = 'edit' | 'preview' | 'split';
 export type AssetEditorMode = EditorMode;
 export interface AssetEditorTab {
     path: string;
@@ -29,6 +29,7 @@ export interface AssetEditorProps {
     compact?: boolean;
     mode?: AssetEditorMode;
     showModeSwitch?: boolean;
+    showBuiltinActions?: boolean;
 }
-export declare function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme, value, canEdit, dirty, saving, entryRevision, openTabs, onChange, onSave, onSelectTab, onCloseTab, onOpenMarkdownPath, actions, compact, mode, showModeSwitch, }: AssetEditorProps): React.JSX.Element;
+export declare function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme, value, canEdit, dirty, saving, entryRevision, openTabs, onChange, onSave, onSelectTab, onCloseTab, onOpenMarkdownPath, actions, compact, mode, showModeSwitch, showBuiltinActions, }: AssetEditorProps): React.JSX.Element;
 export {};

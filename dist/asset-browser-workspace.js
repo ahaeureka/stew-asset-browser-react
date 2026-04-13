@@ -5,6 +5,7 @@ import { AssetDiffViewer } from './asset-diff-viewer';
 import { AssetEditor } from './asset-editor';
 import { buildTree, buttonBaseStyle, cardHeaderStyle, collectInitialExpanded, languageFor, needsLiteralUnescape, panelHandleStyle, pill, primaryButtonStyle, resolveEditorTheme, resolveThemeVars, sectionStyle, selectStyle, shellStyle, toneStyle, toolbarStyle, unescapeLiteralNewlines, } from './asset-browser-shared';
 import { AssetBrowserConsoleShell } from './asset-browser-console-shell';
+import { AssetBrowserReadonly, } from './asset-browser-readonly';
 import { AssetTree } from './asset-tree';
 function Group(props) {
     return React.createElement(GroupPrimitive, props);
@@ -15,7 +16,11 @@ function Panel(props) {
 function Separator(props) {
     return React.createElement(SeparatorPrimitive, props);
 }
-export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVersionId, initialFolder = '/', height = '100%', title, className, style, appearance = 'default', enableEditing = true, defaultDraftDescription = 'Edit assets', theme = 'light', themeVars, editorTheme, showDecorativeBackground = true, callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, }) {
+export function AssetBrowserWorkspace(props) {
+    if (props.mode === 'browse-preview') {
+        return React.createElement(AssetBrowserReadonly, { ...props });
+    }
+    const { client, assetSpace, assetId, initialVersionId, initialFolder = '/', height = '100%', title, className, style, appearance = 'default', enableEditing = true, defaultDraftDescription = 'Edit assets', theme = 'light', themeVars, editorTheme, showDecorativeBackground = true, callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, } = props;
     const [loading, setLoading] = useState(true);
     const [collection, setCollection] = useState(null);
     const [versions, setVersions] = useState([]);
@@ -101,6 +106,7 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
                 setDiffVisible(false);
                 setDirty(false);
                 setEditorSessions({});
+                setOpenEditorPaths([]);
             },
         };
     }
@@ -232,14 +238,29 @@ export function AssetBrowserWorkspace({ client, assetSpace, assetId, initialVers
             if (!mountedRef.current) {
                 return;
             }
-            const nextSelectedVersionId = initialVersionId
+            const preservedSelectedVersionId = selectedVersionId
+                && versionResult.versions.some((item) => item.versionId === selectedVersionId)
+                ? selectedVersionId
+                : '';
+            const initialSelectedVersionId = initialVersionId
+                && versionResult.versions.some((item) => item.versionId === initialVersionId)
+                ? initialVersionId
+                : '';
+            const nextSelectedVersionId = preservedSelectedVersionId
+                || initialSelectedVersionId
                 || nextCollection.draftVersionId
                 || nextCollection.activeVersionId
                 || versionResult.versions[0]?.versionId
                 || '';
-            const nextCompareVersionId = nextCollection.activeVersionId && nextCollection.activeVersionId !== nextSelectedVersionId
-                ? nextCollection.activeVersionId
+            const preservedCompareVersionId = compareVersionId
+                && compareVersionId !== nextSelectedVersionId
+                && versionResult.versions.some((item) => item.versionId === compareVersionId)
+                ? compareVersionId
                 : '';
+            const nextCompareVersionId = preservedCompareVersionId
+                || (nextCollection.activeVersionId && nextCollection.activeVersionId !== nextSelectedVersionId
+                    ? nextCollection.activeVersionId
+                    : '');
             startTransition(() => {
                 setCollection(nextCollection);
                 setVersions(versionResult.versions);
