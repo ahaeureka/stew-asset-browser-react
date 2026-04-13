@@ -45,16 +45,16 @@ const tabStyle = (active: boolean): React.CSSProperties => ({
     fontSize: 12,
     fontWeight: 600,
     cursor: 'pointer',
-    background: active ? 'rgba(14,165,233,0.12)' : 'transparent',
-    color: active ? '#0284c7' : '#64748b',
+    background: active ? 'var(--stew-ab-accent-soft, rgba(14,165,233,0.12))' : 'transparent',
+    color: active ? 'var(--stew-ab-link, #0284c7)' : 'var(--stew-ab-muted-fg, #64748b)',
 });
 
 const secondaryActionStyle = (active = false): React.CSSProperties => ({
     appearance: 'none',
     borderRadius: 999,
-    border: '1px solid rgba(148,163,184,0.22)',
-    background: active ? 'rgba(14,165,233,0.10)' : '#ffffff',
-    color: active ? '#0284c7' : '#334155',
+    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.22))',
+    background: active ? 'var(--stew-ab-accent-soft, rgba(14,165,233,0.10))' : 'var(--stew-ab-surface, #ffffff)',
+    color: active ? 'var(--stew-ab-link, #0284c7)' : 'var(--stew-ab-fg, #334155)',
     padding: '6px 10px',
     fontSize: 12,
     fontWeight: 600,
@@ -68,9 +68,9 @@ const tabChipStyle = (active: boolean): React.CSSProperties => ({
     maxWidth: 260,
     padding: '7px 10px 7px 12px',
     borderRadius: 12,
-    border: active ? '1px solid rgba(14,165,233,0.28)' : '1px solid rgba(148,163,184,0.16)',
-    background: active ? 'rgba(14,165,233,0.10)' : 'rgba(255,255,255,0.78)',
-    color: active ? '#0369a1' : '#334155',
+    border: active ? '1px solid var(--stew-ab-accent-soft, rgba(14,165,233,0.28))' : '1px solid var(--stew-ab-border, rgba(148,163,184,0.16))',
+    background: active ? 'var(--stew-ab-accent-soft, rgba(14,165,233,0.10))' : 'var(--stew-ab-surface, rgba(255,255,255,0.78))',
+    color: active ? 'var(--stew-ab-link, #0369a1)' : 'var(--stew-ab-fg, #334155)',
 });
 
 const previewContainerStyle: React.CSSProperties = {
@@ -80,8 +80,8 @@ const previewContainerStyle: React.CSSProperties = {
     padding: '28px 32px 40px',
     fontSize: 14,
     lineHeight: 1.8,
-    color: '#1e293b',
-    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+    color: 'var(--stew-ab-fg, #1e293b)',
+    background: 'linear-gradient(180deg, var(--stew-ab-surface, #ffffff) 0%, var(--stew-ab-surface-muted, #f8fafc) 100%)',
 };
 
 const previewDocumentStyle: React.CSSProperties = {
@@ -89,14 +89,14 @@ const previewDocumentStyle: React.CSSProperties = {
     margin: '0 auto',
     padding: '32px 36px 44px',
     borderRadius: 24,
-    border: '1px solid rgba(148,163,184,0.16)',
-    background: 'rgba(255,255,255,0.96)',
-    boxShadow: '0 24px 70px rgba(15,23,42,0.08)',
+    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.16))',
+    background: 'var(--stew-ab-surface, rgba(255,255,255,0.96))',
+    boxShadow: 'var(--stew-ab-shadow, 0 24px 70px rgba(15,23,42,0.08))',
 };
 
 const previewLeadStyle: React.CSSProperties = {
     margin: '0 0 24px 0',
-    color: '#64748b',
+    color: 'var(--stew-ab-muted-fg, #64748b)',
     fontSize: 13,
 };
 
@@ -105,17 +105,17 @@ const previewNavStyle: React.CSSProperties = {
     margin: '0 auto 18px',
     padding: '18px 20px',
     borderRadius: 20,
-    border: '1px solid rgba(148,163,184,0.14)',
-    background: 'rgba(248,250,252,0.92)',
-    boxShadow: '0 18px 50px rgba(15,23,42,0.05)',
+    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))',
+    background: 'var(--stew-ab-surface-muted, rgba(248,250,252,0.92))',
+    boxShadow: 'var(--stew-ab-shadow, 0 18px 50px rgba(15,23,42,0.05))',
 };
 
 const previewNavItemStyle = (depth: number, active = false): React.CSSProperties => ({
     appearance: 'none',
     border: 0,
     borderRadius: 10,
-    background: active ? 'rgba(14,165,233,0.10)' : 'transparent',
-    color: active ? '#0369a1' : '#475569',
+    background: active ? 'var(--stew-ab-highlight-bg, rgba(14,165,233,0.10))' : 'transparent',
+    color: active ? 'var(--stew-ab-link, #0369a1)' : 'var(--stew-ab-fg, #475569)',
     cursor: 'pointer',
     fontSize: 13,
     fontWeight: active ? 700 : 500,
@@ -130,10 +130,10 @@ const copyButtonStyle: React.CSSProperties = {
     position: 'absolute',
     top: 12,
     right: 12,
-    border: '1px solid rgba(148,163,184,0.18)',
+    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.18))',
     borderRadius: 999,
-    background: 'rgba(255,255,255,0.92)',
-    color: '#334155',
+    background: 'var(--stew-ab-surface, rgba(255,255,255,0.92))',
+    color: 'var(--stew-ab-fg, #334155)',
     padding: '6px 10px',
     fontSize: 12,
     fontWeight: 600,
@@ -143,7 +143,7 @@ const copyButtonStyle: React.CSSProperties = {
 
 const headingAnchorStyle: React.CSSProperties = {
     marginLeft: 10,
-    color: '#94a3b8',
+    color: 'var(--stew-ab-muted-fg, #94a3b8)',
     textDecoration: 'none',
     fontSize: '0.8em',
     fontWeight: 600,
@@ -278,19 +278,19 @@ function FrontmatterBlock({ fields }: { fields: Array<{ key: string; value: stri
             margin: '0 0 20px 0',
             padding: '14px 18px',
             borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.18)',
-            background: 'rgba(248,250,252,0.8)',
+            border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.18))',
+            background: 'var(--stew-ab-surface-muted, rgba(248,250,252,0.8))',
             fontSize: 13,
             lineHeight: 1.6,
         }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--stew-ab-muted-fg, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                 Frontmatter
             </div>
             <div style={{ display: 'grid', gap: 4 }}>
                 {fields.map(({ key, value }) => (
                     <div key={key} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, color: '#334155', fontFamily: monoFont, fontSize: 12 }}>{key}:</span>
-                        <span style={{ color: '#475569', wordBreak: 'break-word' }}>{value}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--stew-ab-fg, #334155)', fontFamily: monoFont, fontSize: 12 }}>{key}:</span>
+                        <span style={{ color: 'var(--stew-ab-fg, #475569)', wordBreak: 'break-word' }}>{value}</span>
                     </div>
                 ))}
             </div>
@@ -468,8 +468,8 @@ function createMarkdownComponents(
     const nextOrder = () => headingOrder++;
 
     return {
-        h1: createHeadingRenderer('h1', { fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate, nextOrder, onRegisterHeading),
-        h2: createHeadingRenderer('h2', { fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate, nextOrder, onRegisterHeading),
+        h1: createHeadingRenderer('h1', { fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid var(--stew-ab-heading-border, #e2e8f0)' }, createId, onNavigate, nextOrder, onRegisterHeading),
+        h2: createHeadingRenderer('h2', { fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid var(--stew-ab-heading-border, #e2e8f0)' }, createId, onNavigate, nextOrder, onRegisterHeading),
         h3: createHeadingRenderer('h3', { fontSize: 18, fontWeight: 600, margin: '20px 0 8px 0' }, createId, onNavigate, nextOrder, onRegisterHeading),
         h4: createHeadingRenderer('h4', { fontSize: 16, fontWeight: 600, margin: '16px 0 8px 0' }, createId, onNavigate, nextOrder, onRegisterHeading),
         p: ({ children, node, style, ...props }: MarkdownTagProps<'p'>) => (
@@ -510,7 +510,7 @@ function createMarkdownComponents(
             </li>
         ),
         blockquote: ({ children, node, style, ...props }: MarkdownTagProps<'blockquote'>) => (
-            <blockquote {...props} style={mergeStyle({ margin: '0 0 12px 0', padding: '8px 16px', borderLeft: '4px solid #cbd5e1', background: '#f8fafc', color: '#475569' }, style)}>{children}</blockquote>
+            <blockquote {...props} style={mergeStyle({ margin: '0 0 12px 0', padding: '8px 16px', borderLeft: '4px solid var(--stew-ab-blockquote-border, #cbd5e1)', background: 'var(--stew-ab-blockquote-bg, #f8fafc)', color: 'var(--stew-ab-fg, #475569)' }, style)}>{children}</blockquote>
         ),
         code: ({ children, node, className, style, ...props }: MarkdownTagProps<'code'>) => {
             const codeLanguage = inferCodeLanguage(className);
@@ -524,8 +524,8 @@ function createMarkdownComponents(
                         customStyle={{
                             margin: 0,
                             borderRadius: 18,
-                            border: '1px solid rgba(148,163,184,0.14)',
-                            background: '#f8fafc',
+                            border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))',
+                            background: 'var(--stew-ab-surface-muted, #f8fafc)',
                             padding: '18px 20px',
                             fontSize: 13,
                             lineHeight: 1.65,
@@ -549,7 +549,7 @@ function createMarkdownComponents(
                     <button
                         type="button"
                         onClick={() => onOpenMarkdownPath?.(assetPath)}
-                        style={mergeStyle({ padding: '2px 6px', borderRadius: 6, background: '#e2e8f0', fontFamily: monoFont, fontSize: 13, border: 0, color: '#0369a1', cursor: 'pointer' }, style)}
+                        style={mergeStyle({ padding: '2px 6px', borderRadius: 6, background: 'var(--stew-ab-code-bg, #e2e8f0)', fontFamily: monoFont, fontSize: 13, border: 0, color: 'var(--stew-ab-code-fg, #0369a1)', cursor: 'pointer' }, style)}
                     >
                         {text}
                     </button>
@@ -560,7 +560,7 @@ function createMarkdownComponents(
                 <code
                     {...props}
                     className={className}
-                    style={mergeStyle({ padding: '2px 6px', borderRadius: 6, background: '#e2e8f0', fontFamily: monoFont, fontSize: 13 }, style)}
+                    style={mergeStyle({ padding: '2px 6px', borderRadius: 6, background: 'var(--stew-ab-code-bg, #e2e8f0)', fontFamily: monoFont, fontSize: 13 }, style)}
                 >
                     {children}
                 </code>
@@ -585,7 +585,7 @@ function createMarkdownComponents(
                             event.preventDefault();
                             onNavigate(anchorId);
                         }}
-                        style={mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style)}
+                        style={mergeStyle({ color: 'var(--stew-ab-link, #0284c7)', textDecoration: 'none' }, style)}
                     >
                         {children}
                     </a>
@@ -601,37 +601,37 @@ function createMarkdownComponents(
                             event.preventDefault();
                             onOpenMarkdownPath?.(assetPath);
                         }}
-                        style={mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style)}
+                        style={mergeStyle({ color: 'var(--stew-ab-link, #0284c7)', textDecoration: 'none' }, style)}
                     >
                         {children}
                     </a>
                 );
             }
 
-            return <a {...props} href={href} target="_blank" rel="noopener noreferrer" style={mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style)}>{children}</a>;
+            return <a {...props} href={href} target="_blank" rel="noopener noreferrer" style={mergeStyle({ color: 'var(--stew-ab-link, #0284c7)', textDecoration: 'none' }, style)}>{children}</a>;
         },
         table: ({ children, node, style, ...props }: MarkdownTagProps<'table'>) => (
-            <div style={{ margin: '0 0 18px 0', overflow: 'auto', borderRadius: 18, border: '1px solid rgba(148,163,184,0.16)' }}>
-                <table {...props} style={mergeStyle({ borderCollapse: 'separate', borderSpacing: 0, width: '100%', background: '#ffffff' }, style)}>{children}</table>
+            <div style={{ margin: '0 0 18px 0', overflow: 'auto', borderRadius: 18, border: '1px solid var(--stew-ab-table-border, rgba(148,163,184,0.16))' }}>
+                <table {...props} style={mergeStyle({ borderCollapse: 'separate', borderSpacing: 0, width: '100%', background: 'var(--stew-ab-surface, #ffffff)' }, style)}>{children}</table>
             </div>
         ),
         thead: ({ children, node, style, ...props }: MarkdownTagProps<'thead'>) => (
-            <thead {...props} style={mergeStyle({ background: '#f8fafc' }, style)}>{children}</thead>
+            <thead {...props} style={mergeStyle({ background: 'var(--stew-ab-table-header-bg, #f8fafc)' }, style)}>{children}</thead>
         ),
         tbody: ({ children, node, style, ...props }: MarkdownTagProps<'tbody'>) => (
             <tbody {...props} style={style}>{children}</tbody>
         ),
         tr: ({ children, node, style, ...props }: MarkdownTagProps<'tr'>) => (
-            <tr {...props} style={mergeStyle({ background: '#ffffff' }, style)}>{children}</tr>
+            <tr {...props} style={mergeStyle({ background: 'var(--stew-ab-surface, #ffffff)' }, style)}>{children}</tr>
         ),
         th: ({ children, node, style, ...props }: MarkdownTagProps<'th'>) => (
-            <th {...props} style={mergeStyle({ border: '1px solid #e2e8f0', padding: '8px 12px', background: '#f8fafc', fontWeight: 600, textAlign: 'left' }, style)}>{children}</th>
+            <th {...props} style={mergeStyle({ border: '1px solid var(--stew-ab-table-border, #e2e8f0)', padding: '8px 12px', background: 'var(--stew-ab-table-header-bg, #f8fafc)', fontWeight: 600, textAlign: 'left' }, style)}>{children}</th>
         ),
         td: ({ children, node, style, ...props }: MarkdownTagProps<'td'>) => (
-            <td {...props} style={mergeStyle({ border: '1px solid #e2e8f0', padding: '8px 12px' }, style)}>{children}</td>
+            <td {...props} style={mergeStyle({ border: '1px solid var(--stew-ab-table-border, #e2e8f0)', padding: '8px 12px' }, style)}>{children}</td>
         ),
         hr: ({ node, style, ...props }: MarkdownTagProps<'hr'>) => (
-            <hr {...props} style={mergeStyle({ border: 'none', borderTop: '1px solid #e2e8f0', margin: '16px 0' }, style)} />
+            <hr {...props} style={mergeStyle({ border: 'none', borderTop: '1px solid var(--stew-ab-heading-border, #e2e8f0)', margin: '16px 0' }, style)} />
         ),
         input: ({ node, style, type, checked, ...props }: MarkdownTagProps<'input'>) => {
             if (type === 'checkbox') {
@@ -642,14 +642,14 @@ function createMarkdownComponents(
                         checked={checked}
                         disabled
                         readOnly
-                        style={mergeStyle({ marginTop: 5, accentColor: '#0ea5e9', width: 16, height: 16, flexShrink: 0 }, style)}
+                        style={mergeStyle({ marginTop: 5, accentColor: 'var(--stew-ab-accent, #0ea5e9)', width: 16, height: 16, flexShrink: 0 }, style)}
                     />
                 );
             }
             return <input {...props} type={type} checked={checked} style={style} />;
         },
         img: ({ node, style, alt, ...props }: MarkdownTagProps<'img'>) => (
-            <img {...props} alt={alt} style={mergeStyle({ maxWidth: '100%', borderRadius: 18, border: '1px solid rgba(148,163,184,0.16)', boxShadow: '0 18px 40px rgba(15,23,42,0.08)' }, style)} />
+            <img {...props} alt={alt} style={mergeStyle({ maxWidth: '100%', borderRadius: 18, border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.16))', boxShadow: '0 18px 40px rgba(15,23,42,0.08)' }, style)} />
         ),
         strong: ({ children, node, style, ...props }: MarkdownTagProps<'strong'>) => (
             <strong {...props} style={mergeStyle({ fontWeight: 600 }, style)}>{children}</strong>
@@ -679,6 +679,7 @@ export interface AssetEditorProps {
     mode?: AssetEditorMode;
     showModeSwitch?: boolean;
     showBuiltinActions?: boolean;
+    showHeader?: boolean;
 }
 
 export function AssetEditor({
@@ -703,6 +704,7 @@ export function AssetEditor({
     mode,
     showModeSwitch = true,
     showBuiltinActions = true,
+    showHeader = true,
 }: AssetEditorProps) {
     const [internalMode, setInternalMode] = useState<EditorMode>('edit');
     const [copied, setCopied] = useState(false);
@@ -834,8 +836,8 @@ export function AssetEditor({
         const nextScrollTop = Math.max(0, container.scrollTop + (targetRect.top - containerRect.top) - 24);
 
         target.style.transition = 'box-shadow 180ms ease, background-color 180ms ease';
-        target.style.backgroundColor = 'rgba(14,165,233,0.10)';
-        target.style.boxShadow = '0 0 0 3px rgba(14,165,233,0.16)';
+        target.style.backgroundColor = 'var(--stew-ab-highlight-bg, rgba(14,165,233,0.10))';
+        target.style.boxShadow = '0 0 0 3px var(--stew-ab-highlight-ring, rgba(14,165,233,0.16))';
         setActiveOutlineId(item.id);
 
         target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
@@ -1033,8 +1035,8 @@ export function AssetEditor({
         ? { ...subHeaderStyle, padding: '10px 12px', gap: 10 }
         : subHeaderStyle;
     const tabsStyle: React.CSSProperties = compact
-        ? { display: 'flex', gap: 6, overflowX: 'auto', padding: '6px 12px', borderBottom: '1px solid rgba(148,163,184,0.12)', background: 'rgba(248,250,252,0.94)' }
-        : { display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 16px', borderBottom: '1px solid rgba(148,163,184,0.12)', background: 'rgba(248,250,252,0.94)' };
+        ? { display: 'flex', gap: 6, overflowX: 'auto', padding: '6px 12px', borderBottom: '1px solid var(--stew-ab-border, rgba(148,163,184,0.12))', background: 'var(--stew-ab-surface-muted, rgba(248,250,252,0.94))' }
+        : { display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 16px', borderBottom: '1px solid var(--stew-ab-border, rgba(148,163,184,0.12))', background: 'var(--stew-ab-surface-muted, rgba(248,250,252,0.94))' };
     const compactActionStyle = compact
         ? { ...secondaryActionStyle(), padding: '5px 9px', fontSize: 11 }
         : secondaryActionStyle();
@@ -1067,7 +1069,7 @@ export function AssetEditor({
                 aria-label="Table of contents"
             >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: outlineCollapsed ? 0 : 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--stew-ab-muted-fg, #64748b)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         文档目录
                     </div>
                     <button type="button" style={secondaryActionStyle(false)} onClick={() => setOutlineCollapsed((current) => !current)}>
@@ -1119,43 +1121,45 @@ export function AssetEditor({
                     ))}
                 </div>
             ) : null}
-            <div style={headerStyle}>
-                <div style={{ display: 'grid', gap: 3 }}>
-                    <span style={{ fontWeight: 700 }}>{selectedPath || 'Select a file'}</span>
-                    {selectedEntry ? (
-                        <span style={{ fontSize: 12, color: '#64748b' }}>
-                            {selectedEntry.contentType || 'text/plain'} · {formatBytes(selectedEntry.sizeBytes)} · rev {entryRevision}
-                        </span>
-                    ) : null}
+            {showHeader ? (
+                <div style={headerStyle}>
+                    <div style={{ display: 'grid', gap: 3 }}>
+                        <span style={{ fontWeight: 700 }}>{selectedPath || 'Select a file'}</span>
+                        {selectedEntry ? (
+                            <span style={{ fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)' }}>
+                                {selectedEntry.contentType || 'text/plain'} · {formatBytes(selectedEntry.sizeBytes)} · rev {entryRevision}
+                            </span>
+                        ) : null}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                        {showBuiltinActions && activeMode !== 'preview' && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable ? (
+                            <>
+                                <button type="button" style={compactActionStyle} onClick={() => void runEditorAction('actions.find')}>查找</button>
+                                <button type="button" style={compactActionStyle} onClick={() => void runEditorAction('editor.action.startFindReplaceAction')}>替换</button>
+                                <button type="button" style={compactActionStyle} disabled={!canEdit} onClick={() => void handleFormatRequest()}>格式化</button>
+                            </>
+                        ) : null}
+                        {showBuiltinActions && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable && displayValue ? (
+                            <button type="button" style={compactActionStyle} onClick={() => void handleCopyAll()}>
+                                {copied ? '已复制' : '复制'}
+                            </button>
+                        ) : null}
+                        {isMarkdown && showModeSwitch ? (
+                            <div style={{ display: 'inline-flex', gap: 2, background: 'var(--stew-ab-border, rgba(148,163,184,0.10))', borderRadius: 10, padding: 2 }}>
+                                <button type="button" style={tabStyle(activeMode === 'edit')} onClick={() => setInternalMode('edit')}>编辑</button>
+                                <button type="button" style={tabStyle(activeMode === 'preview')} onClick={() => setInternalMode('preview')}>预览</button>
+                                <button type="button" style={tabStyle(activeMode === 'split')} onClick={() => setInternalMode('split')}>分栏</button>
+                            </div>
+                        ) : null}
+                        {actions}
+                        {onSave ? (
+                            <button type="button" style={saveActionStyle} disabled={!canEdit || saving || !dirty} onClick={() => void handleSaveRequest()}>
+                                {saving ? '保存中...' : '保存'}
+                            </button>
+                        ) : null}
+                    </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    {showBuiltinActions && activeMode !== 'preview' && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable ? (
-                        <>
-                            <button type="button" style={compactActionStyle} onClick={() => void runEditorAction('actions.find')}>查找</button>
-                            <button type="button" style={compactActionStyle} onClick={() => void runEditorAction('editor.action.startFindReplaceAction')}>替换</button>
-                            <button type="button" style={compactActionStyle} disabled={!canEdit} onClick={() => void handleFormatRequest()}>格式化</button>
-                        </>
-                    ) : null}
-                    {showBuiltinActions && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable && displayValue ? (
-                        <button type="button" style={compactActionStyle} onClick={() => void handleCopyAll()}>
-                            {copied ? '已复制' : '复制'}
-                        </button>
-                    ) : null}
-                    {isMarkdown && showModeSwitch ? (
-                        <div style={{ display: 'inline-flex', gap: 2, background: 'rgba(148,163,184,0.10)', borderRadius: 10, padding: 2 }}>
-                            <button type="button" style={tabStyle(activeMode === 'edit')} onClick={() => setInternalMode('edit')}>编辑</button>
-                            <button type="button" style={tabStyle(activeMode === 'preview')} onClick={() => setInternalMode('preview')}>预览</button>
-                            <button type="button" style={tabStyle(activeMode === 'split')} onClick={() => setInternalMode('split')}>分栏</button>
-                        </div>
-                    ) : null}
-                    {actions}
-                    {onSave ? (
-                        <button type="button" style={saveActionStyle} disabled={!canEdit || saving || !dirty} onClick={() => void handleSaveRequest()}>
-                            {saving ? '保存中...' : '保存'}
-                        </button>
-                    ) : null}
-                </div>
-            </div>
+            ) : null}
             {activeMode === 'preview' && isMarkdown ? (
                 <div ref={previewScrollRef} style={markdownPreviewContainerStyle}>
                     {markdownOutline.length > 0 ? renderOutlineNav() : null}
@@ -1172,7 +1176,7 @@ export function AssetEditor({
                 </div>
             ) : activeMode === 'split' && isMarkdown ? (
                 <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'minmax(0, 1fr) minmax(0, 1fr)', flex: 1, minHeight: 0 }}>
-                    <div style={{ minWidth: 0, minHeight: 0, borderRight: compact ? 'none' : '1px solid rgba(148,163,184,0.12)' }}>
+                    <div style={{ minWidth: 0, minHeight: 0, borderRight: compact ? 'none' : '1px solid var(--stew-ab-border, rgba(148,163,184,0.12))' }}>
                         <Editor
                             height="100%"
                             defaultLanguage="plaintext"
@@ -1206,7 +1210,7 @@ export function AssetEditor({
                             }}
                         />
                     </div>
-                    <div ref={previewScrollRef} style={{ ...markdownPreviewContainerStyle, borderTop: compact ? '1px solid rgba(148,163,184,0.12)' : 'none' }}>
+                    <div ref={previewScrollRef} style={{ ...markdownPreviewContainerStyle, borderTop: compact ? '1px solid var(--stew-ab-border, rgba(148,163,184,0.12))' : 'none' }}>
                         {markdownOutline.length > 0 ? renderOutlineNav() : null}
                         <article style={markdownPreviewDocumentStyle}>
                             <div ref={previewRootRef}>

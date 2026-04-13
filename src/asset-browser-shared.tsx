@@ -67,6 +67,17 @@ export interface AssetBrowserThemeVars {
     '--stew-ab-shadow': string;
     '--stew-ab-decoration-a': string;
     '--stew-ab-decoration-b': string;
+    '--stew-ab-link': string;
+    '--stew-ab-code-bg': string;
+    '--stew-ab-code-fg': string;
+    '--stew-ab-heading-border': string;
+    '--stew-ab-blockquote-border': string;
+    '--stew-ab-blockquote-bg': string;
+    '--stew-ab-table-border': string;
+    '--stew-ab-table-header-bg': string;
+    '--stew-ab-highlight-bg': string;
+    '--stew-ab-highlight-ring': string;
+    '--stew-ab-directory-icon': string;
 }
 
 export const LIGHT_THEME_VARS: AssetBrowserThemeVars = {
@@ -87,6 +98,17 @@ export const LIGHT_THEME_VARS: AssetBrowserThemeVars = {
     '--stew-ab-shadow': '0 18px 50px rgba(15, 23, 42, 0.08)',
     '--stew-ab-decoration-a': 'rgba(15, 118, 110, 0.08)',
     '--stew-ab-decoration-b': 'rgba(14, 165, 233, 0.08)',
+    '--stew-ab-link': '#0284c7',
+    '--stew-ab-code-bg': '#e2e8f0',
+    '--stew-ab-code-fg': '#0369a1',
+    '--stew-ab-heading-border': '#e2e8f0',
+    '--stew-ab-blockquote-border': '#cbd5e1',
+    '--stew-ab-blockquote-bg': '#f8fafc',
+    '--stew-ab-table-border': '#e2e8f0',
+    '--stew-ab-table-header-bg': '#f8fafc',
+    '--stew-ab-highlight-bg': 'rgba(14, 165, 233, 0.10)',
+    '--stew-ab-highlight-ring': 'rgba(14, 165, 233, 0.16)',
+    '--stew-ab-directory-icon': '#b45309',
 };
 
 export const DARK_THEME_VARS: AssetBrowserThemeVars = {
@@ -107,6 +129,17 @@ export const DARK_THEME_VARS: AssetBrowserThemeVars = {
     '--stew-ab-shadow': '0 18px 50px rgba(0, 0, 0, 0.32)',
     '--stew-ab-decoration-a': 'rgba(45, 212, 191, 0.10)',
     '--stew-ab-decoration-b': 'rgba(56, 189, 248, 0.10)',
+    '--stew-ab-link': '#38bdf8',
+    '--stew-ab-code-bg': '#334155',
+    '--stew-ab-code-fg': '#7dd3fc',
+    '--stew-ab-heading-border': '#334155',
+    '--stew-ab-blockquote-border': '#475569',
+    '--stew-ab-blockquote-bg': '#1e293b',
+    '--stew-ab-table-border': '#334155',
+    '--stew-ab-table-header-bg': '#1e293b',
+    '--stew-ab-highlight-bg': 'rgba(56, 189, 248, 0.10)',
+    '--stew-ab-highlight-ring': 'rgba(56, 189, 248, 0.16)',
+    '--stew-ab-directory-icon': '#f59e0b',
 };
 
 export function resolveThemeVars(

@@ -51,8 +51,8 @@ export function AssetTree({
     const expandedKeys = Array.from(expandedPaths);
     const selectedKeys = selectedPath ? [selectedPath] : [];
     const containerStyle: React.CSSProperties = compact
-        ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'rgba(255,255,255,0.72)' }
-        : { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'rgba(255,255,255,0.72)' };
+        ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'var(--stew-ab-surface, rgba(255,255,255,0.72))' }
+        : { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'var(--stew-ab-surface, rgba(255,255,255,0.72))' };
     const headerStyle: React.CSSProperties = compact
         ? { ...subHeaderStyle, padding: '6px 8px', minHeight: 0, fontSize: 11 }
         : subHeaderStyle;

@@ -214,7 +214,7 @@ function renderPreviewPanel({ context, selectedNode, selectedDocument, loadingDo
     }
     const selectedEntry = createPreviewAssetEntry(selectedNode, selectedDocument);
     const editorMode = toEditorMode(context.previewMode, selectedDocument.fileKind);
-    return (React.createElement(AssetEditor, { selectedPath: selectedDocument.path, selectedEntry: selectedEntry, modelPath: `file:///stew-preview${selectedDocument.path}`, language: languageForPreviewDocument(selectedDocument.fileKind, selectedDocument.path), editorTheme: resolvedEditorTheme, value: selectedDocument.content, canEdit: false, dirty: false, saving: false, entryRevision: 0, mode: editorMode, compact: false, showModeSwitch: false, showBuiltinActions: false, onOpenMarkdownPath: (path) => {
+    return (React.createElement(AssetEditor, { selectedPath: selectedDocument.path, selectedEntry: selectedEntry, modelPath: `file:///stew-preview${selectedDocument.path}`, language: languageForPreviewDocument(selectedDocument.fileKind, selectedDocument.path), editorTheme: resolvedEditorTheme, value: selectedDocument.content, canEdit: false, dirty: false, saving: false, entryRevision: 0, mode: editorMode, compact: false, showModeSwitch: false, showBuiltinActions: false, showHeader: false, onOpenMarkdownPath: (path) => {
             const normalizedPath = normalizePreviewPath(path);
             if (previewIndex.pathMap.has(normalizedPath)) {
                 setSelectedPath(normalizedPath);

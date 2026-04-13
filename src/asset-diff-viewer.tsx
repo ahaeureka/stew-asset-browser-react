@@ -54,8 +54,8 @@ export function AssetDiffViewer({
         ? { ...subHeaderStyle, padding: '10px 12px', gap: 10 }
         : subHeaderStyle;
     const changesStripStyle: React.CSSProperties = compact
-        ? { display: 'flex', gap: 6, overflowX: 'auto', padding: '8px 12px', borderBottom: '1px solid rgba(148,163,184,0.14)' }
-        : { display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 14px', borderBottom: '1px solid rgba(148,163,184,0.14)' };
+        ? { display: 'flex', gap: 6, overflowX: 'auto', padding: '8px 12px', borderBottom: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))' }
+        : { display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 14px', borderBottom: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))' };
 
     const handleDiffMount: DiffOnMount = (editor) => {
         diffEditorRef.current = editor;
@@ -66,7 +66,7 @@ export function AssetDiffViewer({
             <div style={headerStyle}>
                 <div style={{ display: 'grid', gap: 3 }}>
                     <span style={{ fontWeight: 700 }}>差异</span>
-                    <span style={{ fontSize: 12, color: '#64748b' }}>{label}</span>
+                    <span style={{ fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)' }}>{label}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     {actions}
@@ -99,8 +99,8 @@ export function AssetDiffViewer({
                                 padding: compact ? '5px 9px' : '6px 10px',
                                 whiteSpace: 'nowrap',
                                 cursor: onSelectEntry ? 'pointer' : 'default',
-                                background: entry.path === selectedPath ? 'rgba(14,165,233,0.12)' : 'rgba(148,163,184,0.12)',
-                                color: entry.path === selectedPath ? '#0369a1' : '#475569',
+                                background: entry.path === selectedPath ? 'var(--stew-ab-accent-soft, rgba(14,165,233,0.12))' : 'var(--stew-ab-border, rgba(148,163,184,0.12))',
+                                color: entry.path === selectedPath ? 'var(--stew-ab-link, #0369a1)' : 'var(--stew-ab-fg, #475569)',
                                 fontSize: compact ? 11 : 12,
                                 fontWeight: 600,
                             }}

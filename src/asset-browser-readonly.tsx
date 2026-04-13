@@ -495,6 +495,7 @@ function renderPreviewPanel({
             compact={false}
             showModeSwitch={false}
             showBuiltinActions={false}
+            showHeader={false}
             onOpenMarkdownPath={(path) => {
                 const normalizedPath = normalizePreviewPath(path);
                 if (previewIndex.pathMap.has(normalizedPath)) {

@@ -1055,6 +1055,13 @@ SDK 支持三种主题模式，通过 `theme` prop 控制：
     "--stew-ab-surface-muted": "var(--background-secondary)",
     "--stew-ab-sidebar-bg": "var(--background-secondary)",
     "--stew-ab-accent": "var(--color-primary)",
+    "--stew-ab-accent-soft": "rgba(var(--color-primary-rgb), 0.12)",
+    "--stew-ab-link": "var(--color-link)",
+    "--stew-ab-code-bg": "var(--color-code-bg)",
+    "--stew-ab-heading-border": "var(--border)",
+    "--stew-ab-table-border": "var(--border)",
+    "--stew-ab-table-header-bg": "var(--background-secondary)",
+    "--stew-ab-directory-icon": "var(--color-warning)",
   }}
 />
 ```
@@ -1069,7 +1076,119 @@ SDK 支持三种主题模式，通过 `theme` prop 控制：
 
 ### CSS 变量清单
 
-所有 surface 使用 `--stew-ab-*` 前缀的 CSS 变量驱动。完整列表见 `AssetBrowserThemeVars` 类型定义。
+所有视觉样式均通过 `--stew-ab-*` 前缀的 CSS 变量驱动，业务侧可通过 `themeVars` prop 或宿主 CSS 覆盖任意变量。
+
+#### 基础布局变量
+
+| 变量名 | 含义 | 浅色默认值 |
+|--------|------|-----------|
+| `--stew-ab-bg` | 根容器背景 | `#fcfcfd` |
+| `--stew-ab-fg` | 主文本色 | `#0f172a` |
+| `--stew-ab-muted-fg` | 次要文本 | `#64748b` |
+| `--stew-ab-border` | 通用边框色 | `rgba(148, 163, 184, 0.16)` |
+| `--stew-ab-surface` | 卡片/面板背景 | `#ffffff` |
+| `--stew-ab-surface-muted` | 低对比面 | `#f8fafc` |
+| `--stew-ab-surface-elevated` | 浮层/弹窗背景 | `#ffffff` |
+| `--stew-ab-sidebar-bg` | 侧栏背景 | `#f8fafc` |
+| `--stew-ab-topbar-bg` | 顶栏背景 | `#ffffff` |
+| `--stew-ab-footer-bg` | 底栏背景 | `#f8fafc` |
+| `--stew-ab-shadow` | 容器阴影 | `0 18px 50px rgba(15, 23, 42, 0.08)` |
+| `--stew-ab-decoration-a` | 装饰渐变 A | `rgba(15, 118, 110, 0.08)` |
+| `--stew-ab-decoration-b` | 装饰渐变 B | `rgba(14, 165, 233, 0.08)` |
+
+#### 强调色与交互变量
+
+| 变量名 | 含义 | 浅色默认值 |
+|--------|------|-----------|
+| `--stew-ab-accent` | 主色调 | `#0ea5e9` |
+| `--stew-ab-accent-soft` | 主色低饱和 | `rgba(14, 165, 233, 0.12)` |
+| `--stew-ab-accent-contrast` | 主色上的文字 | `#ffffff` |
+| `--stew-ab-selected-bg` | 选中态背景 | `rgba(14, 165, 233, 0.12)` |
+| `--stew-ab-highlight-bg` | 高亮闪烁背景 | `rgba(14, 165, 233, 0.10)` |
+| `--stew-ab-highlight-ring` | 高亮外圈阴影 | `rgba(14, 165, 233, 0.16)` |
+
+#### 内容渲染变量
+
+| 变量名 | 含义 | 浅色默认值 |
+|--------|------|-----------|
+| `--stew-ab-link` | 链接/活跃 Tab 文字色 | `#0284c7` |
+| `--stew-ab-code-bg` | 行内代码背景 | `#e2e8f0` |
+| `--stew-ab-code-fg` | 行内代码文字色 | `#0369a1` |
+| `--stew-ab-heading-border` | Markdown 标题下划线 | `#e2e8f0` |
+| `--stew-ab-blockquote-border` | 引用块左线 | `#cbd5e1` |
+| `--stew-ab-blockquote-bg` | 引用块背景 | `#f8fafc` |
+| `--stew-ab-table-border` | 表格边框 | `#e2e8f0` |
+| `--stew-ab-table-header-bg` | 表头背景 | `#f8fafc` |
+| `--stew-ab-directory-icon` | 目录节点图标色 | `#b45309` |
+
+#### 暗色模式对照
+
+暗色模式通过 `theme="dark"` 启用，所有变量自动切换为暗色预设。核心差异：
+
+| 变量名 | 暗色值 |
+|--------|--------|
+| `--stew-ab-bg` | `#0f172a` |
+| `--stew-ab-fg` | `#e2e8f0` |
+| `--stew-ab-surface` | `#1e293b` |
+| `--stew-ab-accent` | `#38bdf8` |
+| `--stew-ab-link` | `#38bdf8` |
+| `--stew-ab-code-bg` | `#334155` |
+| `--stew-ab-code-fg` | `#7dd3fc` |
+| `--stew-ab-heading-border` | `#334155` |
+| `--stew-ab-table-border` | `#334155` |
+| `--stew-ab-directory-icon` | `#f59e0b` |
+
+完整类型定义见 `AssetBrowserThemeVars`。
+
+### 定制示例：Indigo 品牌色
+
+```tsx
+<AssetBrowserConsoleWorkspace
+  client={client}
+  assetSpace="configs"
+  assetId="gateway-routing"
+  theme="light"
+  themeVars={{
+    "--stew-ab-accent": "#6366f1",
+    "--stew-ab-accent-soft": "rgba(99, 102, 241, 0.12)",
+    "--stew-ab-accent-contrast": "#ffffff",
+    "--stew-ab-selected-bg": "rgba(99, 102, 241, 0.10)",
+    "--stew-ab-link": "#4f46e5",
+    "--stew-ab-code-fg": "#4f46e5",
+    "--stew-ab-highlight-bg": "rgba(99, 102, 241, 0.10)",
+    "--stew-ab-highlight-ring": "rgba(99, 102, 241, 0.16)",
+    "--stew-ab-directory-icon": "#c026d3",
+  }}
+/>
+```
+
+### 纯 CSS 覆盖（不使用 themeVars）
+
+如果使用 `theme="inherit"`，也可以在宿主 CSS 中直接定义变量：
+
+```css
+.my-asset-container {
+  --stew-ab-accent: #6366f1;
+  --stew-ab-link: #4f46e5;
+  --stew-ab-code-bg: #eef2ff;
+  --stew-ab-code-fg: #4338ca;
+  --stew-ab-heading-border: #e0e7ff;
+  --stew-ab-table-border: #e0e7ff;
+  --stew-ab-table-header-bg: #eef2ff;
+}
+```
+
+```tsx
+<div className="my-asset-container">
+  <AssetBrowserConsoleWorkspace
+    client={client}
+    assetSpace="configs"
+    assetId="gateway-routing"
+    theme="inherit"
+    showDecorativeBackground={false}
+  />
+</div>
+```
 
 ## Dashboard 示例
 

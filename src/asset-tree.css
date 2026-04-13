@@ -1,11 +1,11 @@
 .stew-asset-tree {
-    --tree-accent: #0f766e;
-    --tree-accent-strong: #115e59;
-    --tree-accent-soft: rgba(15, 118, 110, 0.12);
-    --tree-border: rgba(148, 163, 184, 0.18);
-    --tree-border-strong: rgba(15, 118, 110, 0.22);
-    --tree-muted: #64748b;
-    --tree-foreground: #0f172a;
+    --tree-accent: var(--stew-ab-accent, #0f766e);
+    --tree-accent-strong: var(--stew-ab-link, #115e59);
+    --tree-accent-soft: var(--stew-ab-accent-soft, rgba(15, 118, 110, 0.12));
+    --tree-border: var(--stew-ab-border, rgba(148, 163, 184, 0.18));
+    --tree-border-strong: var(--stew-ab-accent-soft, rgba(15, 118, 110, 0.22));
+    --tree-muted: var(--stew-ab-muted-fg, #64748b);
+    --tree-foreground: var(--stew-ab-fg, #0f172a);
     background: transparent;
     border: 0;
     font-family: "Avenir Next", "Segoe UI Variable", "IBM Plex Sans", sans-serif;
@@ -105,14 +105,14 @@
 }
 
 .stew-asset-tree .rc-tree-treenode:hover .stew-asset-tree__row {
-    background: rgba(255, 255, 255, 0.88);
+    background: var(--stew-ab-surface, rgba(255, 255, 255, 0.88));
     border-color: var(--tree-border);
 }
 
 .stew-asset-tree__row[data-selected='true'] {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 253, 250, 0.98));
+    background: linear-gradient(180deg, var(--stew-ab-surface, rgba(255, 255, 255, 0.98)), var(--stew-ab-selected-bg, rgba(240, 253, 250, 0.98)));
     border-color: var(--tree-border-strong);
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--stew-ab-shadow, 0 10px 22px rgba(15, 23, 42, 0.08));
     color: var(--tree-accent-strong);
 }
 
@@ -131,11 +131,11 @@
     width: 22px;
     height: 22px;
     flex-shrink: 0;
-    color: #64748b;
+    color: var(--stew-ab-muted-fg, #64748b);
 }
 
 .stew-asset-tree__row[data-directory='true'] .stew-asset-tree__glyph {
-    color: #b45309;
+    color: var(--stew-ab-directory-icon, #b45309);
 }
 
 .stew-asset-tree__row[data-selected='true'] .stew-asset-tree__glyph {

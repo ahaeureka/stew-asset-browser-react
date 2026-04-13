@@ -15,15 +15,15 @@ const tabStyle = (active) => ({
     fontSize: 12,
     fontWeight: 600,
     cursor: 'pointer',
-    background: active ? 'rgba(14,165,233,0.12)' : 'transparent',
-    color: active ? '#0284c7' : '#64748b',
+    background: active ? 'var(--stew-ab-accent-soft, rgba(14,165,233,0.12))' : 'transparent',
+    color: active ? 'var(--stew-ab-link, #0284c7)' : 'var(--stew-ab-muted-fg, #64748b)',
 });
 const secondaryActionStyle = (active = false) => ({
     appearance: 'none',
     borderRadius: 999,
-    border: '1px solid rgba(148,163,184,0.22)',
-    background: active ? 'rgba(14,165,233,0.10)' : '#ffffff',
-    color: active ? '#0284c7' : '#334155',
+    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.22))',
+    background: active ? 'var(--stew-ab-accent-soft, rgba(14,165,233,0.10))' : 'var(--stew-ab-surface, #ffffff)',
+    color: active ? 'var(--stew-ab-link, #0284c7)' : 'var(--stew-ab-fg, #334155)',
     padding: '6px 10px',
     fontSize: 12,
     fontWeight: 600,
@@ -36,9 +36,9 @@ const tabChipStyle = (active) => ({
     maxWidth: 260,
     padding: '7px 10px 7px 12px',
     borderRadius: 12,
-    border: active ? '1px solid rgba(14,165,233,0.28)' : '1px solid rgba(148,163,184,0.16)',
-    background: active ? 'rgba(14,165,233,0.10)' : 'rgba(255,255,255,0.78)',
-    color: active ? '#0369a1' : '#334155',
+    border: active ? '1px solid var(--stew-ab-accent-soft, rgba(14,165,233,0.28))' : '1px solid var(--stew-ab-border, rgba(148,163,184,0.16))',
+    background: active ? 'var(--stew-ab-accent-soft, rgba(14,165,233,0.10))' : 'var(--stew-ab-surface, rgba(255,255,255,0.78))',
+    color: active ? 'var(--stew-ab-link, #0369a1)' : 'var(--stew-ab-fg, #334155)',
 });
 const previewContainerStyle = {
     flex: 1,
@@ -47,21 +47,21 @@ const previewContainerStyle = {
     padding: '28px 32px 40px',
     fontSize: 14,
     lineHeight: 1.8,
-    color: '#1e293b',
-    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+    color: 'var(--stew-ab-fg, #1e293b)',
+    background: 'linear-gradient(180deg, var(--stew-ab-surface, #ffffff) 0%, var(--stew-ab-surface-muted, #f8fafc) 100%)',
 };
 const previewDocumentStyle = {
     maxWidth: 860,
     margin: '0 auto',
     padding: '32px 36px 44px',
     borderRadius: 24,
-    border: '1px solid rgba(148,163,184,0.16)',
-    background: 'rgba(255,255,255,0.96)',
-    boxShadow: '0 24px 70px rgba(15,23,42,0.08)',
+    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.16))',
+    background: 'var(--stew-ab-surface, rgba(255,255,255,0.96))',
+    boxShadow: 'var(--stew-ab-shadow, 0 24px 70px rgba(15,23,42,0.08))',
 };
 const previewLeadStyle = {
     margin: '0 0 24px 0',
-    color: '#64748b',
+    color: 'var(--stew-ab-muted-fg, #64748b)',
     fontSize: 13,
 };
 const previewNavStyle = {
@@ -69,16 +69,16 @@ const previewNavStyle = {
     margin: '0 auto 18px',
     padding: '18px 20px',
     borderRadius: 20,
-    border: '1px solid rgba(148,163,184,0.14)',
-    background: 'rgba(248,250,252,0.92)',
-    boxShadow: '0 18px 50px rgba(15,23,42,0.05)',
+    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))',
+    background: 'var(--stew-ab-surface-muted, rgba(248,250,252,0.92))',
+    boxShadow: 'var(--stew-ab-shadow, 0 18px 50px rgba(15,23,42,0.05))',
 };
 const previewNavItemStyle = (depth, active = false) => ({
     appearance: 'none',
     border: 0,
     borderRadius: 10,
-    background: active ? 'rgba(14,165,233,0.10)' : 'transparent',
-    color: active ? '#0369a1' : '#475569',
+    background: active ? 'var(--stew-ab-highlight-bg, rgba(14,165,233,0.10))' : 'transparent',
+    color: active ? 'var(--stew-ab-link, #0369a1)' : 'var(--stew-ab-fg, #475569)',
     cursor: 'pointer',
     fontSize: 13,
     fontWeight: active ? 700 : 500,
@@ -92,10 +92,10 @@ const copyButtonStyle = {
     position: 'absolute',
     top: 12,
     right: 12,
-    border: '1px solid rgba(148,163,184,0.18)',
+    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.18))',
     borderRadius: 999,
-    background: 'rgba(255,255,255,0.92)',
-    color: '#334155',
+    background: 'var(--stew-ab-surface, rgba(255,255,255,0.92))',
+    color: 'var(--stew-ab-fg, #334155)',
     padding: '6px 10px',
     fontSize: 12,
     fontWeight: 600,
@@ -104,7 +104,7 @@ const copyButtonStyle = {
 };
 const headingAnchorStyle = {
     marginLeft: 10,
-    color: '#94a3b8',
+    color: 'var(--stew-ab-muted-fg, #94a3b8)',
     textDecoration: 'none',
     fontSize: '0.8em',
     fontWeight: 600,
@@ -206,17 +206,17 @@ function FrontmatterBlock({ fields }) {
             margin: '0 0 20px 0',
             padding: '14px 18px',
             borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.18)',
-            background: 'rgba(248,250,252,0.8)',
+            border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.18))',
+            background: 'var(--stew-ab-surface-muted, rgba(248,250,252,0.8))',
             fontSize: 13,
             lineHeight: 1.6,
         } },
-        React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 } }, "Frontmatter"),
+        React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: 'var(--stew-ab-muted-fg, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 } }, "Frontmatter"),
         React.createElement("div", { style: { display: 'grid', gap: 4 } }, fields.map(({ key, value }) => (React.createElement("div", { key: key, style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
-            React.createElement("span", { style: { fontWeight: 600, color: '#334155', fontFamily: monoFont, fontSize: 12 } },
+            React.createElement("span", { style: { fontWeight: 600, color: 'var(--stew-ab-fg, #334155)', fontFamily: monoFont, fontSize: 12 } },
                 key,
                 ":"),
-            React.createElement("span", { style: { color: '#475569', wordBreak: 'break-word' } }, value)))))));
+            React.createElement("span", { style: { color: 'var(--stew-ab-fg, #475569)', wordBreak: 'break-word' } }, value)))))));
 }
 function stripFrontmatter(markdown) {
     return markdown.replace(/^---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, '');
@@ -340,8 +340,8 @@ function createMarkdownComponents(prefix, onNavigate, currentPath, onOpenMarkdow
     let headingOrder = 0;
     const nextOrder = () => headingOrder++;
     return {
-        h1: createHeadingRenderer('h1', { fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate, nextOrder, onRegisterHeading),
-        h2: createHeadingRenderer('h2', { fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }, createId, onNavigate, nextOrder, onRegisterHeading),
+        h1: createHeadingRenderer('h1', { fontSize: 28, fontWeight: 700, margin: '0 0 16px 0', paddingBottom: 8, borderBottom: '1px solid var(--stew-ab-heading-border, #e2e8f0)' }, createId, onNavigate, nextOrder, onRegisterHeading),
+        h2: createHeadingRenderer('h2', { fontSize: 22, fontWeight: 700, margin: '24px 0 12px 0', paddingBottom: 6, borderBottom: '1px solid var(--stew-ab-heading-border, #e2e8f0)' }, createId, onNavigate, nextOrder, onRegisterHeading),
         h3: createHeadingRenderer('h3', { fontSize: 18, fontWeight: 600, margin: '20px 0 8px 0' }, createId, onNavigate, nextOrder, onRegisterHeading),
         h4: createHeadingRenderer('h4', { fontSize: 16, fontWeight: 600, margin: '16px 0 8px 0' }, createId, onNavigate, nextOrder, onRegisterHeading),
         p: ({ children, node, style, ...props }) => (React.createElement("p", { ...props, style: mergeStyle({ margin: '0 0 12px 0' }, style) }, children)),
@@ -357,7 +357,7 @@ function createMarkdownComponents(prefix, onNavigate, currentPath, onOpenMarkdow
                 alignItems: hasClassName(node, 'task-list-item') ? 'flex-start' : undefined,
                 gap: hasClassName(node, 'task-list-item') ? 10 : undefined,
             }, style) }, children)),
-        blockquote: ({ children, node, style, ...props }) => (React.createElement("blockquote", { ...props, style: mergeStyle({ margin: '0 0 12px 0', padding: '8px 16px', borderLeft: '4px solid #cbd5e1', background: '#f8fafc', color: '#475569' }, style) }, children)),
+        blockquote: ({ children, node, style, ...props }) => (React.createElement("blockquote", { ...props, style: mergeStyle({ margin: '0 0 12px 0', padding: '8px 16px', borderLeft: '4px solid var(--stew-ab-blockquote-border, #cbd5e1)', background: 'var(--stew-ab-blockquote-bg, #f8fafc)', color: 'var(--stew-ab-fg, #475569)' }, style) }, children)),
         code: ({ children, node, className, style, ...props }) => {
             const codeLanguage = inferCodeLanguage(className);
             const text = String(children ?? '').replace(/\n$/, '');
@@ -365,8 +365,8 @@ function createMarkdownComponents(prefix, onNavigate, currentPath, onOpenMarkdow
                 return (React.createElement(SyntaxHighlighter, { language: codeLanguage, style: oneLight, PreTag: "div", customStyle: {
                         margin: 0,
                         borderRadius: 18,
-                        border: '1px solid rgba(148,163,184,0.14)',
-                        background: '#f8fafc',
+                        border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.14))',
+                        background: 'var(--stew-ab-surface-muted, #f8fafc)',
                         padding: '18px 20px',
                         fontSize: 13,
                         lineHeight: 1.65,
@@ -380,9 +380,9 @@ function createMarkdownComponents(prefix, onNavigate, currentPath, onOpenMarkdow
                 ? resolveRelativeAssetPath(currentPath, text)
                 : '';
             if (assetPath) {
-                return (React.createElement("button", { type: "button", onClick: () => onOpenMarkdownPath?.(assetPath), style: mergeStyle({ padding: '2px 6px', borderRadius: 6, background: '#e2e8f0', fontFamily: monoFont, fontSize: 13, border: 0, color: '#0369a1', cursor: 'pointer' }, style) }, text));
+                return (React.createElement("button", { type: "button", onClick: () => onOpenMarkdownPath?.(assetPath), style: mergeStyle({ padding: '2px 6px', borderRadius: 6, background: 'var(--stew-ab-code-bg, #e2e8f0)', fontFamily: monoFont, fontSize: 13, border: 0, color: 'var(--stew-ab-code-fg, #0369a1)', cursor: 'pointer' }, style) }, text));
             }
-            return (React.createElement("code", { ...props, className: className, style: mergeStyle({ padding: '2px 6px', borderRadius: 6, background: '#e2e8f0', fontFamily: monoFont, fontSize: 13 }, style) }, children));
+            return (React.createElement("code", { ...props, className: className, style: mergeStyle({ padding: '2px 6px', borderRadius: 6, background: 'var(--stew-ab-code-bg, #e2e8f0)', fontFamily: monoFont, fontSize: 13 }, style) }, children));
         },
         pre: ({ children, node, style, ...props }) => (React.createElement(MarkdownCodeBlockFrame, { copySource: extractPlainText(children).replace(/\n$/, '') },
             React.createElement("pre", { ...props, style: mergeStyle({ margin: 0, overflow: 'auto', background: 'transparent', padding: 0 }, style) }, children))),
@@ -394,35 +394,35 @@ function createMarkdownComponents(prefix, onNavigate, currentPath, onOpenMarkdow
                 return (React.createElement("a", { ...props, href: nextHref, onClick: (event) => {
                         event.preventDefault();
                         onNavigate(anchorId);
-                    }, style: mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style) }, children));
+                    }, style: mergeStyle({ color: 'var(--stew-ab-link, #0284c7)', textDecoration: 'none' }, style) }, children));
             }
             if (assetPath) {
                 return (React.createElement("a", { ...props, href: assetPath, onClick: (event) => {
                         event.preventDefault();
                         onOpenMarkdownPath?.(assetPath);
-                    }, style: mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style) }, children));
+                    }, style: mergeStyle({ color: 'var(--stew-ab-link, #0284c7)', textDecoration: 'none' }, style) }, children));
             }
-            return React.createElement("a", { ...props, href: href, target: "_blank", rel: "noopener noreferrer", style: mergeStyle({ color: '#0284c7', textDecoration: 'none' }, style) }, children);
+            return React.createElement("a", { ...props, href: href, target: "_blank", rel: "noopener noreferrer", style: mergeStyle({ color: 'var(--stew-ab-link, #0284c7)', textDecoration: 'none' }, style) }, children);
         },
-        table: ({ children, node, style, ...props }) => (React.createElement("div", { style: { margin: '0 0 18px 0', overflow: 'auto', borderRadius: 18, border: '1px solid rgba(148,163,184,0.16)' } },
-            React.createElement("table", { ...props, style: mergeStyle({ borderCollapse: 'separate', borderSpacing: 0, width: '100%', background: '#ffffff' }, style) }, children))),
-        thead: ({ children, node, style, ...props }) => (React.createElement("thead", { ...props, style: mergeStyle({ background: '#f8fafc' }, style) }, children)),
+        table: ({ children, node, style, ...props }) => (React.createElement("div", { style: { margin: '0 0 18px 0', overflow: 'auto', borderRadius: 18, border: '1px solid var(--stew-ab-table-border, rgba(148,163,184,0.16))' } },
+            React.createElement("table", { ...props, style: mergeStyle({ borderCollapse: 'separate', borderSpacing: 0, width: '100%', background: 'var(--stew-ab-surface, #ffffff)' }, style) }, children))),
+        thead: ({ children, node, style, ...props }) => (React.createElement("thead", { ...props, style: mergeStyle({ background: 'var(--stew-ab-table-header-bg, #f8fafc)' }, style) }, children)),
         tbody: ({ children, node, style, ...props }) => (React.createElement("tbody", { ...props, style: style }, children)),
-        tr: ({ children, node, style, ...props }) => (React.createElement("tr", { ...props, style: mergeStyle({ background: '#ffffff' }, style) }, children)),
-        th: ({ children, node, style, ...props }) => (React.createElement("th", { ...props, style: mergeStyle({ border: '1px solid #e2e8f0', padding: '8px 12px', background: '#f8fafc', fontWeight: 600, textAlign: 'left' }, style) }, children)),
-        td: ({ children, node, style, ...props }) => (React.createElement("td", { ...props, style: mergeStyle({ border: '1px solid #e2e8f0', padding: '8px 12px' }, style) }, children)),
-        hr: ({ node, style, ...props }) => (React.createElement("hr", { ...props, style: mergeStyle({ border: 'none', borderTop: '1px solid #e2e8f0', margin: '16px 0' }, style) })),
+        tr: ({ children, node, style, ...props }) => (React.createElement("tr", { ...props, style: mergeStyle({ background: 'var(--stew-ab-surface, #ffffff)' }, style) }, children)),
+        th: ({ children, node, style, ...props }) => (React.createElement("th", { ...props, style: mergeStyle({ border: '1px solid var(--stew-ab-table-border, #e2e8f0)', padding: '8px 12px', background: 'var(--stew-ab-table-header-bg, #f8fafc)', fontWeight: 600, textAlign: 'left' }, style) }, children)),
+        td: ({ children, node, style, ...props }) => (React.createElement("td", { ...props, style: mergeStyle({ border: '1px solid var(--stew-ab-table-border, #e2e8f0)', padding: '8px 12px' }, style) }, children)),
+        hr: ({ node, style, ...props }) => (React.createElement("hr", { ...props, style: mergeStyle({ border: 'none', borderTop: '1px solid var(--stew-ab-heading-border, #e2e8f0)', margin: '16px 0' }, style) })),
         input: ({ node, style, type, checked, ...props }) => {
             if (type === 'checkbox') {
-                return (React.createElement("input", { ...props, type: "checkbox", checked: checked, disabled: true, readOnly: true, style: mergeStyle({ marginTop: 5, accentColor: '#0ea5e9', width: 16, height: 16, flexShrink: 0 }, style) }));
+                return (React.createElement("input", { ...props, type: "checkbox", checked: checked, disabled: true, readOnly: true, style: mergeStyle({ marginTop: 5, accentColor: 'var(--stew-ab-accent, #0ea5e9)', width: 16, height: 16, flexShrink: 0 }, style) }));
             }
             return React.createElement("input", { ...props, type: type, checked: checked, style: style });
         },
-        img: ({ node, style, alt, ...props }) => (React.createElement("img", { ...props, alt: alt, style: mergeStyle({ maxWidth: '100%', borderRadius: 18, border: '1px solid rgba(148,163,184,0.16)', boxShadow: '0 18px 40px rgba(15,23,42,0.08)' }, style) })),
+        img: ({ node, style, alt, ...props }) => (React.createElement("img", { ...props, alt: alt, style: mergeStyle({ maxWidth: '100%', borderRadius: 18, border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.16))', boxShadow: '0 18px 40px rgba(15,23,42,0.08)' }, style) })),
         strong: ({ children, node, style, ...props }) => (React.createElement("strong", { ...props, style: mergeStyle({ fontWeight: 600 }, style) }, children)),
     };
 }
-export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme = 'vs', value, canEdit, dirty, saving = false, entryRevision, openTabs = [], onChange, onSave, onSelectTab, onCloseTab, onOpenMarkdownPath, actions, compact = false, mode, showModeSwitch = true, showBuiltinActions = true, }) {
+export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme = 'vs', value, canEdit, dirty, saving = false, entryRevision, openTabs = [], onChange, onSave, onSelectTab, onCloseTab, onOpenMarkdownPath, actions, compact = false, mode, showModeSwitch = true, showBuiltinActions = true, showHeader = true, }) {
     const [internalMode, setInternalMode] = useState('edit');
     const [copied, setCopied] = useState(false);
     const [outlineCollapsed, setOutlineCollapsed] = useState(false);
@@ -530,8 +530,8 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
         const targetRect = target.getBoundingClientRect();
         const nextScrollTop = Math.max(0, container.scrollTop + (targetRect.top - containerRect.top) - 24);
         target.style.transition = 'box-shadow 180ms ease, background-color 180ms ease';
-        target.style.backgroundColor = 'rgba(14,165,233,0.10)';
-        target.style.boxShadow = '0 0 0 3px rgba(14,165,233,0.16)';
+        target.style.backgroundColor = 'var(--stew-ab-highlight-bg, rgba(14,165,233,0.10))';
+        target.style.boxShadow = '0 0 0 3px var(--stew-ab-highlight-ring, rgba(14,165,233,0.16))';
         setActiveOutlineId(item.id);
         target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
         container.scrollTo({ top: nextScrollTop, behavior: 'smooth' });
@@ -691,8 +691,8 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
         ? { ...subHeaderStyle, padding: '10px 12px', gap: 10 }
         : subHeaderStyle;
     const tabsStyle = compact
-        ? { display: 'flex', gap: 6, overflowX: 'auto', padding: '6px 12px', borderBottom: '1px solid rgba(148,163,184,0.12)', background: 'rgba(248,250,252,0.94)' }
-        : { display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 16px', borderBottom: '1px solid rgba(148,163,184,0.12)', background: 'rgba(248,250,252,0.94)' };
+        ? { display: 'flex', gap: 6, overflowX: 'auto', padding: '6px 12px', borderBottom: '1px solid var(--stew-ab-border, rgba(148,163,184,0.12))', background: 'var(--stew-ab-surface-muted, rgba(248,250,252,0.94))' }
+        : { display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 16px', borderBottom: '1px solid var(--stew-ab-border, rgba(148,163,184,0.12))', background: 'var(--stew-ab-surface-muted, rgba(248,250,252,0.94))' };
     const compactActionStyle = compact
         ? { ...secondaryActionStyle(), padding: '5px 9px', fontSize: 11 }
         : secondaryActionStyle();
@@ -720,7 +720,7 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
                 borderRadius: options?.compactMode ? 16 : markdownPreviewNavStyle.borderRadius,
             }, "aria-label": "Table of contents" },
             React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: outlineCollapsed ? 0 : 10 } },
-                React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' } }, "\u6587\u6863\u76EE\u5F55"),
+                React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: 'var(--stew-ab-muted-fg, #64748b)', textTransform: 'uppercase', letterSpacing: '0.08em' } }, "\u6587\u6863\u76EE\u5F55"),
                 React.createElement("button", { type: "button", style: secondaryActionStyle(false), onClick: () => setOutlineCollapsed((current) => !current) }, outlineCollapsed ? '展开' : '折叠')),
             !outlineCollapsed ? (React.createElement("div", { style: { display: 'grid', gap: 2, maxHeight: options?.compactMode ? 132 : undefined, overflow: options?.compactMode ? 'auto' : undefined } }, markdownOutline.map((item) => (React.createElement("button", { key: item.id, type: "button", style: previewNavItemStyle(item.depth, item.id === activeOutlineId), onClick: () => navigateToOutlineItem(item) }, item.text))))) : null));
     }
@@ -730,10 +730,10 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
                 tab.label,
                 tab.dirty ? ' *' : ''),
             onCloseTab ? (React.createElement("button", { type: "button", onClick: () => onCloseTab(tab.path), "aria-label": `Close ${tab.label}`, style: { appearance: 'none', border: 0, background: 'transparent', color: 'inherit', fontSize: 14, lineHeight: 1, cursor: 'pointer', padding: 0, flexShrink: 0 } }, "\u00D7")) : null))))) : null,
-        React.createElement("div", { style: headerStyle },
+        showHeader ? (React.createElement("div", { style: headerStyle },
             React.createElement("div", { style: { display: 'grid', gap: 3 } },
                 React.createElement("span", { style: { fontWeight: 700 } }, selectedPath || 'Select a file'),
-                selectedEntry ? (React.createElement("span", { style: { fontSize: 12, color: '#64748b' } },
+                selectedEntry ? (React.createElement("span", { style: { fontSize: 12, color: 'var(--stew-ab-muted-fg, #64748b)' } },
                     selectedEntry.contentType || 'text/plain',
                     " \u00B7 ",
                     formatBytes(selectedEntry.sizeBytes),
@@ -745,19 +745,19 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
                     React.createElement("button", { type: "button", style: compactActionStyle, onClick: () => void runEditorAction('editor.action.startFindReplaceAction') }, "\u66FF\u6362"),
                     React.createElement("button", { type: "button", style: compactActionStyle, disabled: !canEdit, onClick: () => void handleFormatRequest() }, "\u683C\u5F0F\u5316"))) : null,
                 showBuiltinActions && selectedEntry?.entryKind === 'file' && selectedEntry.isTextPreviewable && displayValue ? (React.createElement("button", { type: "button", style: compactActionStyle, onClick: () => void handleCopyAll() }, copied ? '已复制' : '复制')) : null,
-                isMarkdown && showModeSwitch ? (React.createElement("div", { style: { display: 'inline-flex', gap: 2, background: 'rgba(148,163,184,0.10)', borderRadius: 10, padding: 2 } },
+                isMarkdown && showModeSwitch ? (React.createElement("div", { style: { display: 'inline-flex', gap: 2, background: 'var(--stew-ab-border, rgba(148,163,184,0.10))', borderRadius: 10, padding: 2 } },
                     React.createElement("button", { type: "button", style: tabStyle(activeMode === 'edit'), onClick: () => setInternalMode('edit') }, "\u7F16\u8F91"),
                     React.createElement("button", { type: "button", style: tabStyle(activeMode === 'preview'), onClick: () => setInternalMode('preview') }, "\u9884\u89C8"),
                     React.createElement("button", { type: "button", style: tabStyle(activeMode === 'split'), onClick: () => setInternalMode('split') }, "\u5206\u680F"))) : null,
                 actions,
-                onSave ? (React.createElement("button", { type: "button", style: saveActionStyle, disabled: !canEdit || saving || !dirty, onClick: () => void handleSaveRequest() }, saving ? '保存中...' : '保存')) : null)),
+                onSave ? (React.createElement("button", { type: "button", style: saveActionStyle, disabled: !canEdit || saving || !dirty, onClick: () => void handleSaveRequest() }, saving ? '保存中...' : '保存')) : null))) : null,
         activeMode === 'preview' && isMarkdown ? (React.createElement("div", { ref: previewScrollRef, style: markdownPreviewContainerStyle },
             markdownOutline.length > 0 ? renderOutlineNav() : null,
             React.createElement("article", { style: markdownPreviewDocumentStyle },
                 React.createElement("div", { ref: previewRootRef },
                     frontmatter && frontmatter.fields.length > 0 ? (React.createElement(FrontmatterBlock, { fields: frontmatter.fields })) : null,
                     React.createElement(Markdown, { remarkPlugins: [remarkGfm, remarkFrontmatter], components: markdownComponents }, markdownBody))))) : activeMode === 'split' && isMarkdown ? (React.createElement("div", { style: { display: 'grid', gridTemplateColumns: compact ? '1fr' : 'minmax(0, 1fr) minmax(0, 1fr)', flex: 1, minHeight: 0 } },
-            React.createElement("div", { style: { minWidth: 0, minHeight: 0, borderRight: compact ? 'none' : '1px solid rgba(148,163,184,0.12)' } },
+            React.createElement("div", { style: { minWidth: 0, minHeight: 0, borderRight: compact ? 'none' : '1px solid var(--stew-ab-border, rgba(148,163,184,0.12))' } },
                 React.createElement(Editor, { height: "100%", defaultLanguage: "plaintext", path: modelPath, language: language, theme: editorTheme, value: displayValue, onMount: handleEditorMount, onChange: (next) => onChange(next ?? ''), saveViewState: true, keepCurrentModel: true, options: {
                         readOnly: !canEdit,
                         minimap: { enabled: false },
@@ -778,7 +778,7 @@ export function AssetEditor({ selectedPath, selectedEntry, modelPath, language, 
                             seedSearchStringFromSelection: 'selection',
                         },
                     } })),
-            React.createElement("div", { ref: previewScrollRef, style: { ...markdownPreviewContainerStyle, borderTop: compact ? '1px solid rgba(148,163,184,0.12)' : 'none' } },
+            React.createElement("div", { ref: previewScrollRef, style: { ...markdownPreviewContainerStyle, borderTop: compact ? '1px solid var(--stew-ab-border, rgba(148,163,184,0.12))' : 'none' } },
                 markdownOutline.length > 0 ? renderOutlineNav() : null,
                 React.createElement("article", { style: markdownPreviewDocumentStyle },
                     React.createElement("div", { ref: previewRootRef },

@@ -30,6 +30,7 @@ export interface AssetEditorProps {
     mode?: AssetEditorMode;
     showModeSwitch?: boolean;
     showBuiltinActions?: boolean;
+    showHeader?: boolean;
 }
-export declare function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme, value, canEdit, dirty, saving, entryRevision, openTabs, onChange, onSave, onSelectTab, onCloseTab, onOpenMarkdownPath, actions, compact, mode, showModeSwitch, showBuiltinActions, }: AssetEditorProps): React.JSX.Element;
+export declare function AssetEditor({ selectedPath, selectedEntry, modelPath, language, editorTheme, value, canEdit, dirty, saving, entryRevision, openTabs, onChange, onSave, onSelectTab, onCloseTab, onOpenMarkdownPath, actions, compact, mode, showModeSwitch, showBuiltinActions, showHeader, }: AssetEditorProps): React.JSX.Element;
 export {};

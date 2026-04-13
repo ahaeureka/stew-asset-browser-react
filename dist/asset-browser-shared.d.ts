@@ -38,6 +38,17 @@ export interface AssetBrowserThemeVars {
     '--stew-ab-shadow': string;
     '--stew-ab-decoration-a': string;
     '--stew-ab-decoration-b': string;
+    '--stew-ab-link': string;
+    '--stew-ab-code-bg': string;
+    '--stew-ab-code-fg': string;
+    '--stew-ab-heading-border': string;
+    '--stew-ab-blockquote-border': string;
+    '--stew-ab-blockquote-bg': string;
+    '--stew-ab-table-border': string;
+    '--stew-ab-table-header-bg': string;
+    '--stew-ab-highlight-bg': string;
+    '--stew-ab-highlight-ring': string;
+    '--stew-ab-directory-icon': string;
 }
 export declare const LIGHT_THEME_VARS: AssetBrowserThemeVars;
 export declare const DARK_THEME_VARS: AssetBrowserThemeVars;
