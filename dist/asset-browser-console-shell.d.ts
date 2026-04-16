@@ -17,6 +17,7 @@ export interface AssetBrowserConsoleShellProps {
     controls?: ReactNode;
     actions?: ReactNode;
     status?: AssetBrowserConsoleShellStatus | null;
+    loadingOverlay?: ReactNode;
     sidebarTitle: ReactNode;
     sidebarSubtitle?: ReactNode;
     sidebarActions?: ReactNode;
@@ -30,5 +31,5 @@ export interface AssetBrowserConsoleShellProps {
     compareNote?: ReactNode;
     footer?: ReactNode;
 }
-export declare function AssetBrowserConsoleShell({ className, style, height, heading, themeStyle, themeMode, kicker, badges, controls, actions, status, sidebarTitle, sidebarSubtitle, sidebarActions, sidebarCardTitle, sidebarCardBody, sidebarContent, mainTitle, mainSubtitle, viewSwitcher, mainContent, compareNote, footer, }: AssetBrowserConsoleShellProps): React.JSX.Element;
+export declare function AssetBrowserConsoleShell({ className, style, height, heading, themeStyle, themeMode, kicker, badges, controls, actions, status, loadingOverlay, sidebarTitle, sidebarSubtitle, sidebarActions, sidebarCardTitle, sidebarCardBody, sidebarContent, mainTitle, mainSubtitle, viewSwitcher, mainContent, compareNote, footer, }: AssetBrowserConsoleShellProps): React.JSX.Element;
 export {};

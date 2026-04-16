@@ -21,6 +21,7 @@ export interface AssetBrowserConsoleShellProps {
     controls?: ReactNode;
     actions?: ReactNode;
     status?: AssetBrowserConsoleShellStatus | null;
+    loadingOverlay?: ReactNode;
     sidebarTitle: ReactNode;
     sidebarSubtitle?: ReactNode;
     sidebarActions?: ReactNode;
@@ -47,6 +48,7 @@ export function AssetBrowserConsoleShell({
     controls,
     actions,
     status,
+    loadingOverlay,
     sidebarTitle,
     sidebarSubtitle,
     sidebarActions,
@@ -67,6 +69,7 @@ export function AssetBrowserConsoleShell({
             style={{
                 ...shellStyle,
                 ...themeStyle,
+                position: 'relative',
                 height,
                 ...style,
             } as CSSProperties}
@@ -139,6 +142,8 @@ export function AssetBrowserConsoleShell({
                     ) : null}
                 </div>
             </div>
+
+            {loadingOverlay}
         </section>
     );
 }

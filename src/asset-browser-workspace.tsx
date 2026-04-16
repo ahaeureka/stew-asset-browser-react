@@ -46,6 +46,7 @@ import {
     panelHandleStyle,
     pill,
     primaryButtonStyle,
+    LoadingOverlay,
     resolveEditorTheme,
     resolveThemeVars,
     sectionStyle,
@@ -172,7 +173,8 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
         renderTreeNodeMeta,
         renderTreeNodeActions,
     } = props;
-    const [loading, setLoading] = useState(true);
+    const [workspaceLoading, setWorkspaceLoading] = useState(true);
+    const [treeLoading, setTreeLoading] = useState(false);
     const [collection, setCollection] = useState<AssetCollection | null>(null);
     const [versions, setVersions] = useState<AssetVersionSummary[]>([]);
     const [selectedVersionId, setSelectedVersionId] = useState('');
@@ -204,6 +206,7 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
     const mountedRef = useRef(true);
     const editorSessionsRef = useRef<Record<string, EditorSession>>({});
     const isConsole = appearance === 'console';
+    const loading = workspaceLoading || treeLoading;
 
     const themeStyle = useMemo(
         () => resolveThemeVars(theme, themeVars, showDecorativeBackground),
@@ -293,6 +296,11 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
 
     useEffect(() => {
         if (!selectedVersionId) {
+            setTreeEntries([]);
+            setTreeNodes([]);
+            setExpandedPaths(new Set(['/']));
+            setSelectedPath('');
+            setTreeLoading(false);
             return;
         }
         setEditorSessions({});
@@ -415,7 +423,9 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
     }
 
     async function loadWorkspace() {
-        setLoading(true);
+        setWorkspaceLoading(true);
+        let hasNextSelectedVersion = false;
+        let reloadedCurrentTree = false;
         try {
             const [nextCollection, versionResult] = await Promise.all([
                 client.getCollection(assetSpace, assetId),
@@ -449,6 +459,12 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
                 || (nextCollection.activeVersionId && nextCollection.activeVersionId !== nextSelectedVersionId
                     ? nextCollection.activeVersionId
                     : '');
+            hasNextSelectedVersion = Boolean(nextSelectedVersionId);
+            reloadedCurrentTree = hasNextSelectedVersion && nextSelectedVersionId === selectedVersionId;
+
+            if (hasNextSelectedVersion) {
+                setTreeLoading(true);
+            }
 
             startTransition(() => {
                 setCollection(nextCollection);
@@ -456,26 +472,40 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
                 setSelectedVersionId(nextSelectedVersionId);
                 setCompareVersionId(nextCompareVersionId);
                 setStatus(null);
+                if (!nextSelectedVersionId) {
+                    setTreeEntries([]);
+                    setTreeNodes([]);
+                    setExpandedPaths(new Set(['/']));
+                    setSelectedPath('');
+                }
             });
+
+            if (reloadedCurrentTree) {
+                await loadTree(nextSelectedVersionId, true);
+            }
 
             await callbacks?.onWorkspaceLoaded?.(createActionContext({
                 collection: nextCollection,
                 versions: versionResult.versions,
                 selectedVersionId: nextSelectedVersionId,
                 compareVersionId: nextCompareVersionId,
-                loading: false,
+                loading: hasNextSelectedVersion && !reloadedCurrentTree,
                 status: null,
             }));
         } catch (error) {
             reportError(error);
         } finally {
             if (mountedRef.current) {
-                setLoading(false);
+                setWorkspaceLoading(false);
+                if (!hasNextSelectedVersion) {
+                    setTreeLoading(false);
+                }
             }
         }
     }
 
     async function loadTree(versionId: string, resetSelection: boolean) {
+        setTreeLoading(true);
         try {
             const result = await client.listTree(assetSpace, assetId, {
                 versionId,
@@ -509,6 +539,10 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
             });
         } catch (error) {
             reportError(error);
+        } finally {
+            if (mountedRef.current) {
+                setTreeLoading(false);
+            }
         }
     }
 
@@ -548,6 +582,10 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
         }
     }
 
+    function unescapeDiffText(text: string): string {
+        return needsLiteralUnescape(text) ? unescapeLiteralNewlines(text) : text;
+    }
+
     async function loadDiffForSelection() {
         try {
             const currentVersion = versions.find((item) => item.versionId === selectedVersionId);
@@ -578,8 +616,8 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
                 }
 
                 if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
-                    setDiffLeftText(targetEntry.oldPreview);
-                    setDiffRightText(targetEntry.newPreview);
+                    setDiffLeftText(unescapeDiffText(targetEntry.oldPreview));
+                    setDiffRightText(unescapeDiffText(targetEntry.newPreview));
                     setDiffLabel(`${versionDisplayLabel(diff.baseVersion)} -> ${versionDisplayLabel(diff.draftVersion)}`);
                     return;
                 }
@@ -602,8 +640,8 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
                 if (!mountedRef.current) {
                     return;
                 }
-                setDiffLeftText(detail.leftText);
-                setDiffRightText(detail.rightText);
+                setDiffLeftText(unescapeDiffText(detail.leftText));
+                setDiffRightText(unescapeDiffText(detail.rightText));
                 setDiffLabel(`${versionDisplayLabel(diff.baseVersion)} -> ${versionDisplayLabel(diff.draftVersion)}`);
                 return;
             }
@@ -636,8 +674,8 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
             }
 
             if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
-                setDiffLeftText(targetEntry.oldPreview);
-                setDiffRightText(targetEntry.newPreview);
+                setDiffLeftText(unescapeDiffText(targetEntry.oldPreview));
+                setDiffRightText(unescapeDiffText(targetEntry.newPreview));
                 setDiffLabel(`${versionDisplayLabel(diff.leftVersion)} -> ${versionDisplayLabel(diff.rightVersion)}`);
                 return;
             }
@@ -660,8 +698,8 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
             if (!mountedRef.current) {
                 return;
             }
-            setDiffLeftText(detail.leftText);
-            setDiffRightText(detail.rightText);
+            setDiffLeftText(unescapeDiffText(detail.leftText));
+            setDiffRightText(unescapeDiffText(detail.rightText));
             setDiffLabel(`${versionDisplayLabel(diff.leftVersion)} -> ${versionDisplayLabel(diff.rightVersion)}`);
         } catch (error) {
             reportError(error);
@@ -978,6 +1016,12 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
         : '从左侧目录树选择资源后，可查看正文、预览或差异。';
     const selectedPathLabel = selectedPath || '请选择资源文件';
     const activeEditorMode = isConsole && consoleView === 'preview' ? 'preview' : 'edit';
+    const loadingOverlay = loading ? (
+        <LoadingOverlay
+            title={isConsole ? '正在加载资源' : 'Loading assets'}
+            message={isConsole ? '正在获取资源集合、版本列表与目录树，请稍候。' : 'Fetching the asset collection, versions, and directory tree. Please wait.'}
+        />
+    ) : null;
 
     if (isConsole) {
         return (
@@ -988,6 +1032,7 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
                 heading={heading}
                 themeStyle={themeStyle}
                 themeMode={theme}
+                loadingOverlay={loadingOverlay}
                 kicker="业务资产浏览"
                 badges={(
                     <>
@@ -1231,6 +1276,7 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
             style={{
                 ...shellStyle,
                 ...themeStyle,
+                position: 'relative',
                 height,
                 ...style,
             } as CSSProperties}
@@ -1443,6 +1489,8 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
                         {renderFooter(actionContext)}
                     </div>
                 ) : null}
+
+                {loadingOverlay}
             </>
         </section>
     );

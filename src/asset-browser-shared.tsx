@@ -537,3 +537,66 @@ export function EmptyMessage({ title, message }: { title: string; message: strin
         </div>
     );
 }
+
+export function LoadingOverlay({
+    title = 'Loading assets',
+    message = 'Fetching collection, versions, and the resource tree. Please wait.',
+}: {
+    title?: string;
+    message?: string;
+}) {
+    return (
+        <div
+            role="status"
+            aria-live="polite"
+            style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 20,
+                display: 'grid',
+                placeItems: 'center',
+                padding: 24,
+                background: 'rgba(15, 23, 42, 0.12)',
+                backdropFilter: 'blur(8px)',
+            }}
+        >
+            <div
+                style={{
+                    minWidth: 280,
+                    maxWidth: 360,
+                    display: 'grid',
+                    justifyItems: 'center',
+                    gap: 12,
+                    padding: '22px 24px',
+                    borderRadius: 20,
+                    border: '1px solid var(--stew-ab-border, rgba(148,163,184,0.20))',
+                    background: 'var(--stew-ab-surface-elevated, rgba(255,255,255,0.96))',
+                    boxShadow: '0 20px 48px rgba(15, 23, 42, 0.14)',
+                    textAlign: 'center',
+                }}
+            >
+                <LoadingSpinner />
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--stew-ab-fg, #0f172a)' }}>{title}</div>
+                <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--stew-ab-muted-fg, #64748b)' }}>{message}</div>
+            </div>
+        </div>
+    );
+}
+
+function LoadingSpinner() {
+    return (
+        <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+            <circle cx="21" cy="21" r="16" stroke="var(--stew-ab-accent-soft, rgba(14, 165, 233, 0.18))" strokeWidth="4" />
+            <path d="M21 5C29.8366 5 37 12.1634 37 21" stroke="var(--stew-ab-accent, #0ea5e9)" strokeWidth="4" strokeLinecap="round">
+                <animateTransform
+                    attributeName="transform"
+                    type="rotate"
+                    from="0 21 21"
+                    to="360 21 21"
+                    dur="0.9s"
+                    repeatCount="indefinite"
+                />
+            </path>
+        </svg>
+    );
+}

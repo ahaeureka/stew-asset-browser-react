@@ -3,7 +3,7 @@ import React, { startTransition, useEffect, useMemo, useRef, useState, } from 'r
 import { Group as GroupPrimitive, Panel as PanelPrimitive, Separator as SeparatorPrimitive, } from 'react-resizable-panels';
 import { AssetDiffViewer } from './asset-diff-viewer';
 import { AssetEditor } from './asset-editor';
-import { buildTree, buttonBaseStyle, cardHeaderStyle, collectInitialExpanded, languageFor, needsLiteralUnescape, panelHandleStyle, pill, primaryButtonStyle, resolveEditorTheme, resolveThemeVars, sectionStyle, selectStyle, shellStyle, toneStyle, toolbarStyle, unescapeLiteralNewlines, } from './asset-browser-shared';
+import { buildTree, buttonBaseStyle, cardHeaderStyle, collectInitialExpanded, languageFor, needsLiteralUnescape, panelHandleStyle, pill, primaryButtonStyle, LoadingOverlay, resolveEditorTheme, resolveThemeVars, sectionStyle, selectStyle, shellStyle, toneStyle, toolbarStyle, unescapeLiteralNewlines, } from './asset-browser-shared';
 import { AssetBrowserConsoleShell } from './asset-browser-console-shell';
 import { AssetBrowserReadonly, } from './asset-browser-readonly';
 import { AssetTree } from './asset-tree';
@@ -21,7 +21,8 @@ export function AssetBrowserWorkspace(props) {
         return React.createElement(AssetBrowserReadonly, { ...props });
     }
     const { client, assetSpace, assetId, initialVersionId, initialFolder = '/', height = '100%', title, className, style, appearance = 'default', enableEditing = true, defaultDraftDescription = 'Edit assets', theme = 'light', themeVars, editorTheme, showDecorativeBackground = true, callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, } = props;
-    const [loading, setLoading] = useState(true);
+    const [workspaceLoading, setWorkspaceLoading] = useState(true);
+    const [treeLoading, setTreeLoading] = useState(false);
     const [collection, setCollection] = useState(null);
     const [versions, setVersions] = useState([]);
     const [selectedVersionId, setSelectedVersionId] = useState('');
@@ -53,6 +54,7 @@ export function AssetBrowserWorkspace(props) {
     const mountedRef = useRef(true);
     const editorSessionsRef = useRef({});
     const isConsole = appearance === 'console';
+    const loading = workspaceLoading || treeLoading;
     const themeStyle = useMemo(() => resolveThemeVars(theme, themeVars, showDecorativeBackground), [theme, themeVars, showDecorativeBackground]);
     const resolvedEditorTheme = useMemo(() => resolveEditorTheme(theme, editorTheme), [theme, editorTheme]);
     useEffect(() => {
@@ -127,6 +129,11 @@ export function AssetBrowserWorkspace(props) {
     }, [assetId, assetSpace, initialVersionId]);
     useEffect(() => {
         if (!selectedVersionId) {
+            setTreeEntries([]);
+            setTreeNodes([]);
+            setExpandedPaths(new Set(['/']));
+            setSelectedPath('');
+            setTreeLoading(false);
             return;
         }
         setEditorSessions({});
@@ -229,7 +236,9 @@ export function AssetBrowserWorkspace(props) {
         return result !== false;
     }
     async function loadWorkspace() {
-        setLoading(true);
+        setWorkspaceLoading(true);
+        let hasNextSelectedVersion = false;
+        let reloadedCurrentTree = false;
         try {
             const [nextCollection, versionResult] = await Promise.all([
                 client.getCollection(assetSpace, assetId),
@@ -261,19 +270,33 @@ export function AssetBrowserWorkspace(props) {
                 || (nextCollection.activeVersionId && nextCollection.activeVersionId !== nextSelectedVersionId
                     ? nextCollection.activeVersionId
                     : '');
+            hasNextSelectedVersion = Boolean(nextSelectedVersionId);
+            reloadedCurrentTree = hasNextSelectedVersion && nextSelectedVersionId === selectedVersionId;
+            if (hasNextSelectedVersion) {
+                setTreeLoading(true);
+            }
             startTransition(() => {
                 setCollection(nextCollection);
                 setVersions(versionResult.versions);
                 setSelectedVersionId(nextSelectedVersionId);
                 setCompareVersionId(nextCompareVersionId);
                 setStatus(null);
+                if (!nextSelectedVersionId) {
+                    setTreeEntries([]);
+                    setTreeNodes([]);
+                    setExpandedPaths(new Set(['/']));
+                    setSelectedPath('');
+                }
             });
+            if (reloadedCurrentTree) {
+                await loadTree(nextSelectedVersionId, true);
+            }
             await callbacks?.onWorkspaceLoaded?.(createActionContext({
                 collection: nextCollection,
                 versions: versionResult.versions,
                 selectedVersionId: nextSelectedVersionId,
                 compareVersionId: nextCompareVersionId,
-                loading: false,
+                loading: hasNextSelectedVersion && !reloadedCurrentTree,
                 status: null,
             }));
         }
@@ -282,11 +305,15 @@ export function AssetBrowserWorkspace(props) {
         }
         finally {
             if (mountedRef.current) {
-                setLoading(false);
+                setWorkspaceLoading(false);
+                if (!hasNextSelectedVersion) {
+                    setTreeLoading(false);
+                }
             }
         }
     }
     async function loadTree(versionId, resetSelection) {
+        setTreeLoading(true);
         try {
             const result = await client.listTree(assetSpace, assetId, {
                 versionId,
@@ -317,6 +344,11 @@ export function AssetBrowserWorkspace(props) {
         }
         catch (error) {
             reportError(error);
+        }
+        finally {
+            if (mountedRef.current) {
+                setTreeLoading(false);
+            }
         }
     }
     async function loadFile(entry, versionId) {
@@ -355,6 +387,9 @@ export function AssetBrowserWorkspace(props) {
             reportError(error);
         }
     }
+    function unescapeDiffText(text) {
+        return needsLiteralUnescape(text) ? unescapeLiteralNewlines(text) : text;
+    }
     async function loadDiffForSelection() {
         try {
             const currentVersion = versions.find((item) => item.versionId === selectedVersionId);
@@ -383,8 +418,8 @@ export function AssetBrowserWorkspace(props) {
                     return;
                 }
                 if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
-                    setDiffLeftText(targetEntry.oldPreview);
-                    setDiffRightText(targetEntry.newPreview);
+                    setDiffLeftText(unescapeDiffText(targetEntry.oldPreview));
+                    setDiffRightText(unescapeDiffText(targetEntry.newPreview));
                     setDiffLabel(`${versionDisplayLabel(diff.baseVersion)} -> ${versionDisplayLabel(diff.draftVersion)}`);
                     return;
                 }
@@ -398,8 +433,8 @@ export function AssetBrowserWorkspace(props) {
                 if (!mountedRef.current) {
                     return;
                 }
-                setDiffLeftText(detail.leftText);
-                setDiffRightText(detail.rightText);
+                setDiffLeftText(unescapeDiffText(detail.leftText));
+                setDiffRightText(unescapeDiffText(detail.rightText));
                 setDiffLabel(`${versionDisplayLabel(diff.baseVersion)} -> ${versionDisplayLabel(diff.draftVersion)}`);
                 return;
             }
@@ -429,8 +464,8 @@ export function AssetBrowserWorkspace(props) {
                 return;
             }
             if (targetEntry.isText && (targetEntry.oldPreview || targetEntry.newPreview || targetEntry.unifiedDiff)) {
-                setDiffLeftText(targetEntry.oldPreview);
-                setDiffRightText(targetEntry.newPreview);
+                setDiffLeftText(unescapeDiffText(targetEntry.oldPreview));
+                setDiffRightText(unescapeDiffText(targetEntry.newPreview));
                 setDiffLabel(`${versionDisplayLabel(diff.leftVersion)} -> ${versionDisplayLabel(diff.rightVersion)}`);
                 return;
             }
@@ -444,8 +479,8 @@ export function AssetBrowserWorkspace(props) {
             if (!mountedRef.current) {
                 return;
             }
-            setDiffLeftText(detail.leftText);
-            setDiffRightText(detail.rightText);
+            setDiffLeftText(unescapeDiffText(detail.leftText));
+            setDiffRightText(unescapeDiffText(detail.rightText));
             setDiffLabel(`${versionDisplayLabel(diff.leftVersion)} -> ${versionDisplayLabel(diff.rightVersion)}`);
         }
         catch (error) {
@@ -738,8 +773,9 @@ export function AssetBrowserWorkspace(props) {
         : '从左侧目录树选择资源后，可查看正文、预览或差异。';
     const selectedPathLabel = selectedPath || '请选择资源文件';
     const activeEditorMode = isConsole && consoleView === 'preview' ? 'preview' : 'edit';
+    const loadingOverlay = loading ? (React.createElement(LoadingOverlay, { title: isConsole ? '正在加载资源' : 'Loading assets', message: isConsole ? '正在获取资源集合、版本列表与目录树，请稍候。' : 'Fetching the asset collection, versions, and directory tree. Please wait.' })) : null;
     if (isConsole) {
-        return (React.createElement(AssetBrowserConsoleShell, { className: className, style: style, height: height, heading: heading, themeStyle: themeStyle, themeMode: theme, kicker: "\u4E1A\u52A1\u8D44\u4EA7\u6D4F\u89C8", badges: (React.createElement(React.Fragment, null,
+        return (React.createElement(AssetBrowserConsoleShell, { className: className, style: style, height: height, heading: heading, themeStyle: themeStyle, themeMode: theme, loadingOverlay: loadingOverlay, kicker: "\u4E1A\u52A1\u8D44\u4EA7\u6D4F\u89C8", badges: (React.createElement(React.Fragment, null,
                 pill('空间', assetSpace),
                 pill('资产', assetId),
                 pill('模式', isDraftSelected ? '草稿' : '只读'),
@@ -819,6 +855,7 @@ export function AssetBrowserWorkspace(props) {
     return (React.createElement("section", { className: className, "data-stew-theme": theme, style: {
             ...shellStyle,
             ...themeStyle,
+            position: 'relative',
             height,
             ...style,
         } },
@@ -916,7 +953,8 @@ export function AssetBrowserWorkspace(props) {
                 "Comparing against ",
                 versionDisplayLabel(selectedCompareVersion),
                 " when diff mode is enabled.")) : null,
-            renderFooter ? (React.createElement("div", { style: { padding: '12px 18px', borderTop: '1px solid var(--stew-ab-border, rgba(148,163,184,0.10))', background: 'var(--stew-ab-footer-bg, rgba(248,250,252,0.92))' } }, renderFooter(actionContext))) : null)));
+            renderFooter ? (React.createElement("div", { style: { padding: '12px 18px', borderTop: '1px solid var(--stew-ab-border, rgba(148,163,184,0.10))', background: 'var(--stew-ab-footer-bg, rgba(248,250,252,0.92))' } }, renderFooter(actionContext))) : null,
+            loadingOverlay)));
 }
 function filterTreeNodes(nodes, query) {
     const normalizedQuery = query.trim().toLowerCase();

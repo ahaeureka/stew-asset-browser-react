@@ -2,10 +2,11 @@
 import React from 'react';
 import { shellStyle } from './asset-browser-shared';
 import './asset-browser-console.css';
-export function AssetBrowserConsoleShell({ className, style, height = '100%', heading, themeStyle, themeMode, kicker, badges, controls, actions, status, sidebarTitle, sidebarSubtitle, sidebarActions, sidebarCardTitle, sidebarCardBody, sidebarContent, mainTitle, mainSubtitle, viewSwitcher, mainContent, compareNote, footer, }) {
+export function AssetBrowserConsoleShell({ className, style, height = '100%', heading, themeStyle, themeMode, kicker, badges, controls, actions, status, loadingOverlay, sidebarTitle, sidebarSubtitle, sidebarActions, sidebarCardTitle, sidebarCardBody, sidebarContent, mainTitle, mainSubtitle, viewSwitcher, mainContent, compareNote, footer, }) {
     return (React.createElement("section", { className: joinClassNames('stew-asset-workspace', 'stew-asset-workspace--console', className), "data-stew-theme": themeMode, style: {
             ...shellStyle,
             ...themeStyle,
+            position: 'relative',
             height,
             ...style,
         } },
@@ -37,7 +38,8 @@ export function AssetBrowserConsoleShell({ className, style, height = '100%', he
                     viewSwitcher ? viewSwitcher : null),
                 React.createElement("div", { className: "stew-asset-workspace__console-main-panel" }, mainContent),
                 compareNote ? (React.createElement("div", { className: "stew-asset-workspace__console-compare-note" }, compareNote)) : null,
-                footer ? (React.createElement("div", { className: "stew-asset-workspace__console-footer" }, footer)) : null))));
+                footer ? (React.createElement("div", { className: "stew-asset-workspace__console-footer" }, footer)) : null)),
+        loadingOverlay));
 }
 function joinClassNames(...values) {
     return values.filter(Boolean).join(' ');

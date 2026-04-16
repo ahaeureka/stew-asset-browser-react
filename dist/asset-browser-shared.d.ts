@@ -160,4 +160,8 @@ export declare function EmptyMessage({ title, message }: {
     title: string;
     message: string;
 }): React.JSX.Element;
+export declare function LoadingOverlay({ title, message, }: {
+    title?: string;
+    message?: string;
+}): React.JSX.Element;
 export {};
