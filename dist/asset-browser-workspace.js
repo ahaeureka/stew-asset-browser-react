@@ -1,5 +1,5 @@
 "use client";
-import React, { startTransition, useEffect, useMemo, useRef, useState, } from 'react';
+import React, { startTransition, useEffect, useImperativeHandle, useMemo, useRef, useState, } from 'react';
 import { Group as GroupPrimitive, Panel as PanelPrimitive, Separator as SeparatorPrimitive, } from 'react-resizable-panels';
 import { AssetDiffViewer } from './asset-diff-viewer';
 import { AssetEditor } from './asset-editor';
@@ -20,7 +20,7 @@ export function AssetBrowserWorkspace(props) {
     if (props.mode === 'browse-preview') {
         return React.createElement(AssetBrowserReadonly, { ...props });
     }
-    const { client, assetSpace, assetId, initialVersionId, initialFolder = '/', height = '100%', title, className, style, appearance = 'default', enableEditing = true, defaultDraftDescription = 'Edit assets', theme = 'light', themeVars, editorTheme, showDecorativeBackground = true, callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, } = props;
+    const { ref, client, assetSpace, assetId, initialVersionId, initialFolder = '/', height = '100%', title, className, style, appearance = 'default', enableEditing = true, readOnly = false, defaultDraftDescription = 'Edit assets', theme = 'light', themeVars, editorTheme, showDecorativeBackground = true, callbacks, onError, onStateChange, renderHeaderExtras, renderToolbarStart, renderToolbarEnd, renderEditorActions, renderDiffActions, renderFooter, renderTreeNodeMeta, renderTreeNodeActions, } = props;
     const [workspaceLoading, setWorkspaceLoading] = useState(true);
     const [treeLoading, setTreeLoading] = useState(false);
     const [collection, setCollection] = useState(null);
@@ -112,6 +112,7 @@ export function AssetBrowserWorkspace(props) {
             },
         };
     }
+    useImperativeHandle(ref, () => createWorkspaceActions(), [collection, versions, selectedVersionId]);
     useEffect(() => {
         onStateChange?.({
             collection,
@@ -717,6 +718,7 @@ export function AssetBrowserWorkspace(props) {
     const isDraftSelected = Boolean(selectedVersion?.isDraft);
     const canPreviewMarkdown = editorLanguage === 'markdown' && selectedEntry?.entryKind === 'file';
     const canEdit = enableEditing
+        && !readOnly
         && isDraftSelected
         && selectedEntry?.entryKind === 'file'
         && Boolean(selectedEntry?.isTextPreviewable);
@@ -803,9 +805,9 @@ export function AssetBrowserWorkspace(props) {
                     React.createElement("span", { className: "stew-asset-workspace__console-control-label" }, "\u641C\u7D22\u8D44\u6E90"),
                     React.createElement("input", { value: treeQuery, onChange: (event) => setTreeQuery(event.target.value), placeholder: "\u6309\u6587\u4EF6\u540D\u6216\u8DEF\u5F84\u8FC7\u6EE4\u76EE\u5F55\u6811", style: consoleSearchInputStyle })))), actions: (React.createElement(React.Fragment, null,
                 renderHeaderExtras ? renderHeaderExtras(actionContext) : null,
-                !collection?.hasDraft ? (React.createElement("button", { type: "button", style: topbarPrimaryButtonStyle, disabled: actionBusy, onClick: () => void handleCreateDraft() }, "\u521B\u5EFA\u8349\u7A3F")) : null,
-                collection?.hasDraft ? (React.createElement("button", { type: "button", style: topbarButtonStyle, disabled: actionBusy, onClick: () => void handleDiscardDraft() }, "\u5E9F\u5F03\u8349\u7A3F")) : null,
-                collection?.hasDraft ? (React.createElement("button", { type: "button", style: topbarPrimaryButtonStyle, disabled: actionBusy, onClick: () => void handlePublishDraft() }, "\u53D1\u5E03\u7248\u672C")) : null,
+                !readOnly && !collection?.hasDraft ? (React.createElement("button", { type: "button", style: topbarPrimaryButtonStyle, disabled: actionBusy, onClick: () => void handleCreateDraft() }, "\u521B\u5EFA\u8349\u7A3F")) : null,
+                !readOnly && collection?.hasDraft ? (React.createElement("button", { type: "button", style: topbarButtonStyle, disabled: actionBusy, onClick: () => void handleDiscardDraft() }, "\u5E9F\u5F03\u8349\u7A3F")) : null,
+                !readOnly && collection?.hasDraft ? (React.createElement("button", { type: "button", style: topbarPrimaryButtonStyle, disabled: actionBusy, onClick: () => void handlePublishDraft() }, "\u53D1\u5E03\u7248\u672C")) : null,
                 React.createElement("button", { type: "button", style: topbarButtonStyle, disabled: !selectedVersionId || exporting, onClick: () => void handleExport() }, exporting ? '导出中...' : selectedPath ? '导出当前资源' : '导出当前版本'),
                 React.createElement("button", { type: "button", style: topbarButtonStyle, disabled: loading, onClick: () => void loadWorkspace() }, "\u5237\u65B0"),
                 renderToolbarEnd ? renderToolbarEnd(actionContext) : null)), status: status, sidebarTitle: "\u8D44\u6E90\u76EE\u5F55", sidebarSubtitle: treeQuery.trim() ? `筛选后 ${visibleTreeCount} 项` : `共 ${treeEntries.length} 项`, sidebarActions: (React.createElement(React.Fragment, null,
@@ -893,9 +895,9 @@ export function AssetBrowserWorkspace(props) {
                             " \u00B7 ",
                             version.status))))),
                 React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' } },
-                    !collection?.hasDraft ? (React.createElement("button", { type: "button", style: primaryButtonStyle, disabled: actionBusy, onClick: () => void handleCreateDraft() }, "Create draft")) : null,
-                    collection?.hasDraft ? (React.createElement("button", { type: "button", style: buttonBaseStyle, disabled: actionBusy, onClick: () => void handleDiscardDraft() }, "Discard draft")) : null,
-                    collection?.hasDraft ? (React.createElement("button", { type: "button", style: primaryButtonStyle, disabled: actionBusy, onClick: () => void handlePublishDraft() }, "Publish draft")) : null,
+                    !readOnly && !collection?.hasDraft ? (React.createElement("button", { type: "button", style: primaryButtonStyle, disabled: actionBusy, onClick: () => void handleCreateDraft() }, "Create draft")) : null,
+                    !readOnly && collection?.hasDraft ? (React.createElement("button", { type: "button", style: buttonBaseStyle, disabled: actionBusy, onClick: () => void handleDiscardDraft() }, "Discard draft")) : null,
+                    !readOnly && collection?.hasDraft ? (React.createElement("button", { type: "button", style: primaryButtonStyle, disabled: actionBusy, onClick: () => void handlePublishDraft() }, "Publish draft")) : null,
                     React.createElement("button", { type: "button", style: buttonBaseStyle, disabled: !selectedPath, onClick: () => setDiffVisible(!showDiff) }, showDiff ? 'Hide diff' : 'Show diff'),
                     React.createElement("button", { type: "button", style: buttonBaseStyle, disabled: !selectedVersionId || exporting, onClick: () => void handleExport() }, exporting ? 'Exporting...' : selectedPath ? 'Export selection' : 'Export version'),
                     React.createElement("button", { type: "button", style: buttonBaseStyle, disabled: loading, onClick: () => void loadWorkspace() }, "Refresh")),

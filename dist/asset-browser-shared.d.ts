@@ -115,6 +115,15 @@ export interface AssetBrowserWorkspaceActions {
     /** Clear diff visibility, reset dirty state, and clear cached editor sessions/tabs. */
     clearDraftState: () => void;
 }
+/** Imperative handle exposed via ref for external workspace control. */
+export interface AssetBrowserWorkspaceHandle {
+    /** Switch the selected version. Triggers tree reload via the version-change effect. */
+    selectVersion(versionId: string): void;
+    /** Reload collection, versions, and tree from the server. */
+    refreshWorkspace(): Promise<void>;
+    /** Clear diff visibility, reset dirty state, and clear cached editor sessions/tabs. */
+    clearDraftState(): void;
+}
 type MaybePromise<T> = T | Promise<T>;
 export interface AssetBrowserWorkspaceCallbacks {
     onWorkspaceLoaded?: (context: AssetBrowserActionContext) => MaybePromise<void>;

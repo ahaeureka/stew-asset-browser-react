@@ -5,4 +5,4 @@ export { AssetBrowserConsoleShell, type AssetBrowserConsoleShellProps, } from '.
 export { AssetTree, type AssetTreeProps, } from './asset-tree.js';
 export { AssetEditor, type AssetEditorProps, type AssetEditorTab, } from './asset-editor.js';
 export { AssetDiffViewer, type AssetDiffViewerProps, } from './asset-diff-viewer.js';
-export type { AssetBrowserActionContext, AssetBrowserMode, AssetBrowserWorkspaceAppearance, AssetBrowserWorkspaceActions, AssetBrowserWorkspaceCallbacks, AssetBrowserWorkspaceState, AssetBrowserThemeMode, AssetBrowserEditorTheme, AssetBrowserThemeVars, PreviewContext, PreviewDocument, PreviewFileKind, PreviewMode, PreviewTreeNode, StatusMessage, TreeNode, WorkspaceTone, } from './asset-browser-shared.js';
+export type { AssetBrowserActionContext, AssetBrowserMode, AssetBrowserWorkspaceAppearance, AssetBrowserWorkspaceActions, AssetBrowserWorkspaceCallbacks, AssetBrowserWorkspaceHandle, AssetBrowserWorkspaceState, AssetBrowserThemeMode, AssetBrowserEditorTheme, AssetBrowserThemeVars, PreviewContext, PreviewDocument, PreviewFileKind, PreviewMode, PreviewTreeNode, StatusMessage, TreeNode, WorkspaceTone, } from './asset-browser-shared.js';

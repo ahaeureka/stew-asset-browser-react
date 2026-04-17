@@ -1160,6 +1160,13 @@ export function AssetEditor({
                     </div>
                 </div>
             ) : null}
+            {!showHeader && displayValue ? (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 10px 0', flexShrink: 0 }}>
+                    <button type="button" style={compactActionStyle} onClick={() => void handleCopyAll()}>
+                        {copied ? '已复制' : '复制'}
+                    </button>
+                </div>
+            ) : null}
             {activeMode === 'preview' && isMarkdown ? (
                 <div ref={previewScrollRef} style={markdownPreviewContainerStyle}>
                     {markdownOutline.length > 0 ? renderOutlineNav() : null}

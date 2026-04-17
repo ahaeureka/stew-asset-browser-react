@@ -427,7 +427,9 @@ async function handleExport() {
 | `className` | `string` | 否 | 无 | 外层容器 class | 接入业务样式系统时使用 |
 | `style` | `CSSProperties` | 否 | 无 | 外层容器内联样式 | 调整宽高、圆角、阴影 |
 | `enableEditing` | `boolean` | 否 | `true` | 是否允许草稿编辑 | 只读审阅页可传 `false` |
-| `defaultDraftDescription` | `string` | 否 | `Edit assets` | 点击“Create draft”时默认带上的说明 | `"审批后修改配置"` || `theme` | `'light' \| 'dark' \| 'inherit'` | 否 | `'light'` | 主题模式 | inherit 模式下完全跟随宿主 CSS 变量 |
+| `readOnly` | `boolean` | 否 | `false` | 只读模式：隐藏创建草稿/废弃草稿/发布版本按钮，编辑器强制只读 | 翻译版本预览、版本回溯查看 |
+| `defaultDraftDescription` | `string` | 否 | `Edit assets` | 点击“Create draft”时默认带上的说明 | `"审批后修改配置"` |
+| `theme` | `'light' \| 'dark' \| 'inherit'` | 否 | `'light'` | 主题模式 | inherit 模式下完全跟随宿主 CSS 变量 |
 | `themeVars` | `Partial<AssetBrowserThemeVars>` | 否 | 无 | 覆盖默认 token，传入 CSS 变量值 | `{ '--stew-ab-bg': 'var(--background)' }` |
 | `editorTheme` | `'vs' \| 'vs-dark' \| string` | 否 | 自动跟随 `theme` | Monaco 编辑器主题 | `'vs-dark'` |
 | `showDecorativeBackground` | `boolean` | 否 | `true` | 是否显示装饰性渐变背景 | 嵌入宿主时建议 `false` |
@@ -714,6 +716,98 @@ return target ? (
 | `renderFooter` | `(context) => ReactNode` | 在底部状态栏插入内容 | 显示当前路径、草稿 ID、审批状态 |
 | `renderTreeNodeMeta` | `(node) => ReactNode` | 自定义树节点右侧元信息 | 替换默认文件大小显示 |
 | `renderTreeNodeActions` | `(node) => ReactNode` | 在树节点右侧追加操作 | 收藏、标记、快捷菜单 |
+
+## 外部版本切换（Imperative Handle）
+
+从这一版起，`AssetBrowserWorkspace` 和 `AssetBrowserConsoleWorkspace` 支持通过 `ref` 在任意时机调用内部动作，无需依赖 `callbacks` 上下文。
+
+### 类型定义
+
+```ts
+interface AssetBrowserWorkspaceHandle {
+    /** 切换到指定业务版本，触发树和编辑区重载。 */
+    selectVersion(versionId: string): void;
+    /** 重新拉取 collection、versions 和目录树。 */
+    refreshWorkspace(): Promise<void>;
+    /** 关闭 Diff、清空脏状态、清理编辑器缓存和标签页。 */
+    clearDraftState(): void;
+}
+```
+
+### 基本示例
+
+```tsx
+"use client";
+
+import { useRef, useMemo } from "react";
+import { AssetBrowserClient } from "protobuf-typescript-client-gen/dist/asset_browser_client";
+import {
+    AssetBrowserConsoleWorkspace,
+    type AssetBrowserWorkspaceHandle,
+} from "stew-asset-browser-react";
+
+export default function SkillEditorPage() {
+    const client = useMemo(
+        () => new AssetBrowserClient({ baseUrl: "http://localhost:3012" }),
+        [],
+    );
+    const workspaceRef = useRef<AssetBrowserWorkspaceHandle>(null);
+
+    function handleLanguageSwitch(locale: string) {
+        const localeVersionId = `v1.0.0-${locale}`;
+        workspaceRef.current?.selectVersion(localeVersionId);
+    }
+
+    return (
+        <>
+            <nav>
+                <button type="button" onClick={() => handleLanguageSwitch("en-us")}>English</button>
+                <button type="button" onClick={() => handleLanguageSwitch("zh-cn")}>Chinese</button>
+            </nav>
+            <AssetBrowserConsoleWorkspace
+                ref={workspaceRef}
+                client={client}
+                assetSpace="skills"
+                assetId="my-skill"
+                readOnly={false}
+            />
+        </>
+    );
+}
+```
+
+### 与 `readOnly` 配合使用
+
+翻译版本或历史回溯等只读场景，可同时传入 `readOnly` 隐藏草稿操作按钮：
+
+```tsx
+const [isLocalePreview, setLocalePreview] = useState(false);
+
+<AssetBrowserConsoleWorkspace
+    ref={workspaceRef}
+    client={client}
+    assetSpace="skills"
+    assetId="my-skill"
+    readOnly={isLocalePreview}
+/>
+```
+
+`readOnly={true}` 时的效果：
+
+- 创建草稿、废弃草稿、发布版本按钮隐藏
+- 编辑器强制只读（无论当前版本是否为草稿）
+- 版本列表、版本对比、目录浏览、文件下载等功能不受影响
+
+### 与现有 `callbacks.workspaceActions` 的关系
+
+`ref` 暴露的三个方法与 `callbacks` 上下文中 `workspaceActions` 提供的方法完全一致。差异仅在于调用时机：
+
+| 方式 | 可调用时机 | 适用场景 |
+|------|-----------|---------|
+| `ref.current.selectVersion(...)` | 任意时机 | 语言切换、外部按钮触发版本跳转 |
+| `context.workspaceActions.selectVersion(...)` | 仅在 `onBefore*` 回调内 | 宿主接管发布流程后切版本 |
+
+两者可以同时使用，互不冲突。
 
 ## callbacks 详细说明
 

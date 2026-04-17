@@ -34,6 +34,7 @@ export type {
     AssetBrowserWorkspaceAppearance,
     AssetBrowserWorkspaceActions,
     AssetBrowserWorkspaceCallbacks,
+    AssetBrowserWorkspaceHandle,
     AssetBrowserWorkspaceState,
     AssetBrowserThemeMode,
     AssetBrowserEditorTheme,

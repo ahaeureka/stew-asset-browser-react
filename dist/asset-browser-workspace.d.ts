@@ -1,9 +1,10 @@
-import React, { type CSSProperties, type ReactNode } from 'react';
+import React, { type CSSProperties, type ReactNode, type Ref } from 'react';
 import { AssetBrowserClient } from 'protobuf-typescript-client-gen/dist/asset_browser_client';
-import { type AssetBrowserActionContext, type AssetBrowserEditorTheme, type AssetBrowserWorkspaceAppearance, type AssetBrowserThemeMode, type AssetBrowserThemeVars, type AssetBrowserWorkspaceCallbacks, type AssetBrowserWorkspaceState, type TreeNode } from './asset-browser-shared';
+import { type AssetBrowserActionContext, type AssetBrowserEditorTheme, type AssetBrowserWorkspaceAppearance, type AssetBrowserThemeMode, type AssetBrowserThemeVars, type AssetBrowserWorkspaceCallbacks, type AssetBrowserWorkspaceHandle, type AssetBrowserWorkspaceState, type TreeNode } from './asset-browser-shared';
 import { type AssetBrowserReadonlyProps } from './asset-browser-readonly';
 export interface AssetBrowserManagedWorkspaceProps {
     mode?: 'workspace';
+    ref?: Ref<AssetBrowserWorkspaceHandle>;
     client: AssetBrowserClient;
     assetSpace: string;
     assetId: string;
@@ -16,6 +17,8 @@ export interface AssetBrowserManagedWorkspaceProps {
     style?: CSSProperties;
     appearance?: AssetBrowserWorkspaceAppearance;
     enableEditing?: boolean;
+    /** When true, hides draft action buttons and forces the editor into read-only mode. */
+    readOnly?: boolean;
     defaultDraftDescription?: string;
     theme?: AssetBrowserThemeMode;
     themeVars?: Partial<AssetBrowserThemeVars>;

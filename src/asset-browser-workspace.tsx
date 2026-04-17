@@ -3,8 +3,10 @@
 import React, {
     type CSSProperties,
     type ReactNode,
+    type Ref,
     startTransition,
     useEffect,
+    useImperativeHandle,
     useMemo,
     useRef,
     useState,
@@ -40,6 +42,7 @@ import {
     type AssetBrowserThemeVars,
     type AssetBrowserWorkspaceActions,
     type AssetBrowserWorkspaceCallbacks,
+    type AssetBrowserWorkspaceHandle,
     type AssetBrowserWorkspaceState,
     languageFor,
     needsLiteralUnescape,
@@ -105,6 +108,7 @@ type AssetBrowserConsoleView = 'edit' | 'preview' | 'diff';
 
 export interface AssetBrowserManagedWorkspaceProps {
     mode?: 'workspace';
+    ref?: Ref<AssetBrowserWorkspaceHandle>;
     client: AssetBrowserClient;
     assetSpace: string;
     assetId: string;
@@ -117,6 +121,8 @@ export interface AssetBrowserManagedWorkspaceProps {
     style?: CSSProperties;
     appearance?: AssetBrowserWorkspaceAppearance;
     enableEditing?: boolean;
+    /** When true, hides draft action buttons and forces the editor into read-only mode. */
+    readOnly?: boolean;
     defaultDraftDescription?: string;
     theme?: AssetBrowserThemeMode;
     themeVars?: Partial<AssetBrowserThemeVars>;
@@ -145,6 +151,7 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
     }
 
     const {
+        ref,
         client,
         assetSpace,
         assetId,
@@ -156,6 +163,7 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
         style,
         appearance = 'default',
         enableEditing = true,
+        readOnly = false,
         defaultDraftDescription = 'Edit assets',
         theme = 'light',
         themeVars,
@@ -276,6 +284,8 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
             },
         };
     }
+
+    useImperativeHandle(ref, () => createWorkspaceActions(), [collection, versions, selectedVersionId]);
 
     useEffect(() => {
         onStateChange?.({
@@ -954,6 +964,7 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
     const isDraftSelected = Boolean(selectedVersion?.isDraft);
     const canPreviewMarkdown = editorLanguage === 'markdown' && selectedEntry?.entryKind === 'file';
     const canEdit = enableEditing
+        && !readOnly
         && isDraftSelected
         && selectedEntry?.entryKind === 'file'
         && Boolean(selectedEntry?.isTextPreviewable);
@@ -1082,17 +1093,17 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
                 actions={(
                     <>
                         {renderHeaderExtras ? renderHeaderExtras(actionContext) : null}
-                        {!collection?.hasDraft ? (
+                        {!readOnly && !collection?.hasDraft ? (
                             <button type="button" style={topbarPrimaryButtonStyle} disabled={actionBusy} onClick={() => void handleCreateDraft()}>
                                 创建草稿
                             </button>
                         ) : null}
-                        {collection?.hasDraft ? (
+                        {!readOnly && collection?.hasDraft ? (
                             <button type="button" style={topbarButtonStyle} disabled={actionBusy} onClick={() => void handleDiscardDraft()}>
                                 废弃草稿
                             </button>
                         ) : null}
-                        {collection?.hasDraft ? (
+                        {!readOnly && collection?.hasDraft ? (
                             <button type="button" style={topbarPrimaryButtonStyle} disabled={actionBusy} onClick={() => void handlePublishDraft()}>
                                 发布版本
                             </button>
@@ -1334,17 +1345,17 @@ export function AssetBrowserWorkspace(props: AssetBrowserWorkspaceProps) {
                     </label>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
-                        {!collection?.hasDraft ? (
+                        {!readOnly && !collection?.hasDraft ? (
                             <button type="button" style={primaryButtonStyle} disabled={actionBusy} onClick={() => void handleCreateDraft()}>
                                 Create draft
                             </button>
                         ) : null}
-                        {collection?.hasDraft ? (
+                        {!readOnly && collection?.hasDraft ? (
                             <button type="button" style={buttonBaseStyle} disabled={actionBusy} onClick={() => void handleDiscardDraft()}>
                                 Discard draft
                             </button>
                         ) : null}
-                        {collection?.hasDraft ? (
+                        {!readOnly && collection?.hasDraft ? (
                             <button type="button" style={primaryButtonStyle} disabled={actionBusy} onClick={() => void handlePublishDraft()}>
                                 Publish draft
                             </button>
