@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState, } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback, } from 'react';
 import { Group as GroupPrimitive, Panel as PanelPrimitive, Separator as SeparatorPrimitive, } from 'react-resizable-panels';
 import { AssetBrowserConsoleShell } from './asset-browser-console-shell';
 import { AssetEditor } from './asset-editor';
-import { cardHeaderStyle, collectInitialExpanded, EmptyMessage, formatBytes, panelHandleStyle, pill, resolveEditorTheme, resolveThemeVars, sectionStyle, shellStyle, selectStyle, toolbarStyle, toneStyle, } from './asset-browser-shared';
+import { buttonBaseStyle, cardHeaderStyle, collectInitialExpanded, EmptyMessage, formatBytes, panelHandleStyle, pill, resolveEditorTheme, resolveThemeVars, sectionStyle, shellStyle, selectStyle, toolbarStyle, toneStyle, } from './asset-browser-shared';
 import { AssetTree } from './asset-tree';
 function Group(props) {
     return React.createElement(GroupPrimitive, props);
@@ -196,6 +196,40 @@ function renderPreviewModeToolbar(context, renderPreviewToolbar) {
         canRenderToolbar ? (React.createElement("div", { style: { display: 'inline-flex', gap: 2, background: 'rgba(148,163,184,0.10)', borderRadius: 10, padding: 2 } }, context.availablePreviewModes.map((mode) => (React.createElement("button", { key: mode, type: "button", style: modeButtonStyle(mode === context.previewMode), onClick: () => context.setPreviewMode(mode) }, previewModeLabel(mode)))))) : null,
         renderPreviewToolbar ? renderPreviewToolbar(context) : null));
 }
+const previewCopyButtonStyle = {
+    ...buttonBaseStyle,
+    position: 'absolute',
+    top: 8,
+    right: 10,
+    zIndex: 2,
+    minHeight: 30,
+    padding: '0 10px',
+    fontSize: 12,
+};
+function PreviewPanelWithCopy({ content, children }) {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = useCallback(async () => {
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(content);
+        }
+        else {
+            const textarea = document.createElement('textarea');
+            textarea.value = content;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1400);
+    }, [content]);
+    return (React.createElement("div", { style: { position: 'relative', height: '100%', minHeight: 0 } },
+        content ? (React.createElement("button", { type: "button", style: previewCopyButtonStyle, onClick: () => void handleCopy() }, copied ? '已复制' : '复制')) : null,
+        children));
+}
 function renderPreviewPanel({ context, selectedNode, selectedDocument, loadingDocument, renderDocument, resolvedEditorTheme, setSelectedPath, previewIndex, }) {
     if (!selectedNode) {
         return React.createElement(EmptyMessage, { title: "\u5C1A\u672A\u9009\u62E9\u6587\u4EF6", message: "\u8BF7\u5148\u4ECE\u5DE6\u4FA7\u76EE\u5F55\u6811\u9009\u62E9\u4E00\u4E2A\u6587\u4EF6\u3002" });
@@ -210,7 +244,7 @@ function renderPreviewPanel({ context, selectedNode, selectedDocument, loadingDo
         return React.createElement(EmptyMessage, { title: "\u6682\u65E0\u53EF\u7528\u9884\u89C8", message: "\u5F53\u524D\u6587\u4EF6\u6CA1\u6709\u53EF\u7528\u7684\u53EA\u8BFB\u5185\u5BB9\u3002" });
     }
     if (renderDocument) {
-        return React.createElement(React.Fragment, null, renderDocument(selectedDocument, context.previewMode, context));
+        return (React.createElement(PreviewPanelWithCopy, { content: selectedDocument.content }, renderDocument(selectedDocument, context.previewMode, context)));
     }
     const selectedEntry = createPreviewAssetEntry(selectedNode, selectedDocument);
     const editorMode = toEditorMode(context.previewMode, selectedDocument.fileKind);

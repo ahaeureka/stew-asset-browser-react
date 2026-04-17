@@ -7,6 +7,7 @@ import React, {
     useMemo,
     useRef,
     useState,
+    useCallback,
 } from 'react';
 import {
     Group as GroupPrimitive,
@@ -437,6 +438,50 @@ function renderPreviewModeToolbar(
     );
 }
 
+const previewCopyButtonStyle: CSSProperties = {
+    ...buttonBaseStyle,
+    position: 'absolute',
+    top: 8,
+    right: 10,
+    zIndex: 2,
+    minHeight: 30,
+    padding: '0 10px',
+    fontSize: 12,
+};
+
+function PreviewPanelWithCopy({ content, children }: { content: string; children: ReactNode }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = useCallback(async () => {
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(content);
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = content;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1400);
+    }, [content]);
+
+    return (
+        <div style={{ position: 'relative', height: '100%', minHeight: 0 }}>
+            {content ? (
+                <button type="button" style={previewCopyButtonStyle} onClick={() => void handleCopy()}>
+                    {copied ? '已复制' : '复制'}
+                </button>
+            ) : null}
+            {children}
+        </div>
+    );
+}
+
 function renderPreviewPanel({
     context,
     selectedNode,
@@ -473,7 +518,11 @@ function renderPreviewPanel({
     }
 
     if (renderDocument) {
-        return <>{renderDocument(selectedDocument, context.previewMode, context)}</>;
+        return (
+            <PreviewPanelWithCopy content={selectedDocument.content}>
+                {renderDocument(selectedDocument, context.previewMode, context)}
+            </PreviewPanelWithCopy>
+        );
     }
 
     const selectedEntry = createPreviewAssetEntry(selectedNode, selectedDocument);
